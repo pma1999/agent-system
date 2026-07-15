@@ -480,6 +480,14 @@ const EDITS = [
     replace: `none|minimal|low|medium|high|xhigh|max`
   },
   {
+    file: "agents/codex-rescue.md",
+    id: "docs: rescue agent haiku model",
+    core: false,
+    applied: (s) => /^model:\s*haiku\s*$/m.test(s),
+    find: `model: sonnet`,
+    replace: `model: haiku`
+  },
+  {
     file: "commands/rescue.md",
     id: "docs: rescue command flags rule",
     core: false,
@@ -569,6 +577,6 @@ if (!dryRun) {
       `  node "${path.join(pluginDir, "scripts", "codex-companion.mjs")}" task --agent task-implementer-bdd --effort low "Do not read files or run commands. State your allowed report Status values on one line."\n` +
       "  -> must echo: DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT | PACK_GAP\n" +
       `  node "${path.join(pluginDir, "scripts", "codex-companion.mjs")}" task --agent implementation-planner --model gpt-5.6-sol --effort max "Read-only handshake: do not read or write files. Reply exactly PLANNER_MAX_READY."\n` +
-      "  -> must reach the runtime and echo: PLANNER_MAX_READY"
+      "  -> must reach the runtime and echo: PLANNER_MAX_READY (verifies max-effort acceptance only; the orchestrator's Codex planning preset is sol/xhigh)"
   );
 }

@@ -1,6 +1,8 @@
 # Design: Multi-Agent System v2 (.claude + .codex)
 
-Companion to `analysis.md` (findings D/I/E/Q, verified facts V). This document is the buildable specification: target architecture, per-file specs, implementation plan, and verification. Nothing here is implemented yet.
+Companion to `analysis.md` (findings D/I/E/Q, verified facts V). This document is the buildable specification: target architecture, per-file specs, implementation plan, and verification.
+
+> **STATUS: IMPLEMENTED 2026-07-15** — see `progress.md` for the as-built record, applied decisions (planner preset sol/xhigh; per-brief Codex routing ON; haiku rescue; git init; Edit allowed — denylist is `Agent` only; no Opus escalation), verification evidence, and deferred live checks. Where this spec and progress.md differ, progress.md reflects what was built.
 
 ## 0. Design tenets
 
@@ -97,10 +99,7 @@ Contents (moved + updated, not new policy except where flagged):
 
 Common changes to all six (D7/D8):
 - Frontmatter additions: `effort:` (planner `xhigh`, reviewer `xhigh`, others `high`); `color:` (explorer cyan, researcher yellow, planner blue, implementer green, reviewer purple, debugger orange); tool enforcement via `disallowedTools` (denylist chosen over allowlist so MCP/codegraph/future tools keep working):
-  - codebase-explorer, integration-researcher, root-cause-debugger, implementation-reviewer: `disallowedTools: Agent, Edit, NotebookEdit` — a **denylist**, so `Write` (plus Bash/Grep/Read/Glob/codegraph) remains available. These roles create their artifacts (context map, recipe, review, diagnosis, temp probes/scaffolding) as new files with `Write`, and update an existing artifact (PACK_GAP patch, re-review round) via Read + full-file `Write` overwrite — artifact files are small, so overwrite cost is negligible. Scope of the enforcement: blocking `Edit`/`NotebookEdit` removes the natural production-code modification path and omitting `Agent` hard-blocks spawning; `Write` can still technically overwrite a previously-read file, so this is strong friction plus guaranteed non-recursion, **not** a hermetic write barrier — the role prompt's "own artifacts only" boundary remains the semantic rule (hermetic path-scoping via agent hooks considered and rejected, see §3).
-  - implementation-planner: `disallowedTools: Agent` (needs Write+Edit for bundle upkeep; needs Skill for frontend guidance when planning UI; prose boundary covers production code).
-  - task-implementer-bdd: `disallowedTools: Agent` (full toolset incl. Skill for frontend skills; cannot spawn).
-  - Note: `Agent` absent ⇒ cannot spawn subagents (V1) — the non-recursion principle becomes machine-enforced; keep the prose sentence too (it explains *why*).
+  - ALL six roles: `disallowedTools: Agent` only (**user decision 2026-07-15**): non-recursion is the one machine-enforced boundary; `Write` AND `Edit` stay available to every role so artifacts can be created and updated in place without full-file rewrites. The "read-only except own artifacts / no production code" boundary is enforced by the role prompt (as today), not by tool config — hermetic path-scoping via agent hooks considered and rejected, see §3. Keep the prose non-recursion sentence too (it explains *why*).
 - Body: no mass rewrite; keep current text with the deltas below.
 
 Role-specific deltas:

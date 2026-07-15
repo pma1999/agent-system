@@ -1,11 +1,11 @@
 ---
 name: repatch-codex
-description: Re-apply the local Codex plugin compatibility patch (`--agent` injection plus model-dependent `--effort max`) after an update wipes it. Use after Codex plugin updates, on unknown `--agent`/`max` errors, or when asked to restore the local patch.
+description: Re-apply the local Codex plugin compatibility patch (`--agent` injection, model-dependent `--effort max`, haiku rescue model) after an update wipes it. Use after Codex plugin updates, on unknown `--agent`/`max` errors, or when asked to restore the local patch.
 ---
 
 # Repatch Codex Plugin
 
-The installed Codex plugin carries a local compatibility patch that adds `--agent <name>` to the companion `task` command (native injection of `~/.codex/agents/<name>.toml` `developer_instructions` via app-server `developerInstructions`) and accepts the model-dependent `max` reasoning effort used by GPT-5.6-Sol planning. Plugin updates wipe the cache copy; this skill restores both behaviors.
+The installed Codex plugin carries a local compatibility patch that (1) adds `--agent <name>` to the companion `task` command (native injection of `~/.codex/agents/<name>.toml` `developer_instructions` via app-server `developerInstructions`), (2) accepts the model-dependent `max` reasoning effort (needed for `~/.codex/config.toml`'s Sol/max default and explicit max requests), and (3) sets the mechanical `codex-rescue` forwarder to haiku. Plugin updates wipe the cache copy; this skill restores all three.
 
 ## Steps
 
@@ -24,6 +24,16 @@ It auto-detects the newest version under `~/.claude/plugins/cache/openai-codex/c
 
 3. If runtime behavior is in doubt, run the live checks printed by the script:
    - the cheap `--agent task-implementer-bdd --effort low` check must echo `DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT | PACK_GAP`, proving role injection;
-   - a read-only `--agent implementation-planner --model gpt-5.6-sol --effort max` handshake must complete without an effort-validation error, proving the planning preset reaches the runtime.
+   - a read-only `--agent implementation-planner --model gpt-5.6-sol --effort max` handshake must complete without an effort-validation error, proving `max` acceptance reaches the runtime (the orchestrator's Codex planning preset itself is `sol/xhigh`; `max` matters for config-default runs and explicit user requests).
 
-The orchestrator skill's Codex peer-implementer template (`--wait --write --agent task-implementer-bdd`) and optional Codex planning template depend on this patch. The peer implementer intentionally remains model/effort-free.
+The Codex dispatch templates in `~/.claude/skills/orchestrator/references/codex-delegation.md` (peer implementer `--agent task-implementer-bdd --model <m> --effort <e>`, planner `--agent implementation-planner`) depend on this patch.
+
+## Optional: role-twin parity check
+
+While doing plugin/system maintenance, also run the role-file drift detector:
+
+```bash
+node "C:\Users\Pablo\.claude\patches\agent-parity-check.mjs"
+```
+
+It compares each `~/.claude/agents/<role>.md` with its `~/.codex/agents/<role>.toml` twin section by section. Investigate new drift or unexpected one-sided sections; intentional cross-CLI differences are normal and stay.
