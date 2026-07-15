@@ -18,6 +18,8 @@ The target native workflow is:
 
 This snapshot explains why the compatibility backend exists. Treat it as historical evidence; use the verification procedure below to establish the behavior of the installed release.
 
+(Last audit note: codex-cli 0.144.4 was installed on 2026-07-15; the readiness gate below had not been re-run against it.)
+
 As of Codex CLI 0.144.3 on 2026-07-13:
 
 - Default GPT-5.6 Sol / Multi-Agent V2 exposed `task_name`, `message`, and `fork_turns`, while hiding role and routing inputs.

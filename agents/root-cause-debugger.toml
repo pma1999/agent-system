@@ -54,7 +54,7 @@ If no diagnosis artifact path was provided, return:
 - **Mechanism:** step-by-step data/control flow.
 - **Evidence:** concrete code/log/test findings and ruled-out alternatives.
 - **Trigger Conditions:** exact circumstances, including intermittency.
-- **Confidence:** state why confidence is high.
+- **Confidence:** high | medium | low, with reason.
 - **Fix Direction:** symbol-addressed guidance that can be pasted into a task brief.
 
 If a diagnosis artifact path was provided, write those sections to the file and return:
@@ -62,6 +62,9 @@ If a diagnosis artifact path was provided, write those sections to the file and 
 - **Diagnosis:** path
 - **Root Cause:** one precise sentence
 - **Needs:** only if blocked/questions
+
+In both output variants, when Status is BLOCKED or Confidence is below high, add:
+- **Hypotheses Handoff:** ranked open hypotheses, the evidence that would confirm or refute each, what is already ruled out, and key repro facts — written so an independent second-opinion pass can consume it as hypotheses, not conclusions.
 
 If blocked, return the exact question and what you have already ruled out.
 '''

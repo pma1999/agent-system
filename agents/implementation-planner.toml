@@ -29,6 +29,7 @@ The orchestrator gives you:
 - one or more `context-map.md` files from `codebase-explorer`
 - Integration Recipe paths when external contracts were researched
 - any product decisions already settled
+- the baseline SHA when already captured
 
 Treat context maps as the starting map. Do not re-discover what they already settle. Investigate further only where the design depends on an unresolved detail.
 
@@ -130,6 +131,7 @@ Include:
 - cross-task interfaces
 - verification overview
 - risks/watch-outs
+- under risks, one line stating whether the change meets the adversarial second-review criteria (security, data/migrations, concurrency, public contracts, critical UX)
 - a routing matrix for every implementation task, every required task review, and final review: work unit, agent, model, effort, intelligence, concise rationale, and escalation triggers
 
 The routing matrix is the cross-plan view. The corresponding task brief is authoritative for task-local implementation and review routing. Select one final-review profile for the integrated change rather than inheriting it from any task.
@@ -220,14 +222,17 @@ Never tell an implementer to read the whole plan, `AGENTS.md`, or neighboring co
 
 ### `progress.md`
 
-Initialize a simple ledger:
+Initialize a simple ledger. The first eight columns are the cross-engine core (shared with the Claude-side orchestrator so bundles stay portable); the remaining columns are Codex-runtime extensions. `Owner` and all runtime fields are filled by the orchestrator at dispatch time — leave them `—`.
 
 ```markdown
 # Progress: <feature>
 
-| Task | Status | Implementer backend / owner | Follow-up | Execution jobs / cleanup | Planned profile | Actual profile | Brief | Report | Reviewer backend / owner | Review planned / actual / status | Notes |
+Planning: engine=codex | model=gpt-5.6-sol | effort=xhigh | fallback=none
+Baseline: <sha supplied by the orchestrator, or pending>
+
+| Task | Status | Implementer | Owner | Brief | Report | Review | Notes | Follow-up | Jobs / cleanup | Actual profile | Reviewer owner / review profile |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| <id> | pending | — | — | — | `<model>` / `<effort>` (<score>) | — | task-<id>-brief.md | task-<id>-report.md | — | skipped-not-needed OR `<model>` / `<effort>` (<score>) / — / pending |  |
+| <id> | pending | task-implementer-bdd `<model>`/`<effort>` (<score>) | — | task-<id>-brief.md | task-<id>-report.md | skipped-not-needed OR `<model>`/`<effort>` (<score>) pending |  | — | — | — | — |
 
 ## Final Review
 - Planned profile: `<model>` / `<effort>` (<score>)

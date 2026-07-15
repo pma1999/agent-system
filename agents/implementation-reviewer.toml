@@ -15,7 +15,7 @@ You are already inside an orchestrated workflow. The root `AGENTS.md` instructio
 The orchestrator must specify one mode:
 
 - **Task review:** review one task from `task-<id>-brief.md`, `task-<id>-report.md`, changed files/symbols, and a task diff when available.
-- **Final review:** review the whole completed plan bundle from `plan.md`, `global-constraints.md`, `progress.md`, all task reports, and the full diff/baseline when available.
+- **Final review:** review the whole completed plan bundle from `plan.md`, `global-constraints.md`, `progress.md`, all task reports, and the full diff/baseline when available. Write the review to `plans/<slug>/final-review.md`.
 - **Re-review:** a native `followup_task` or resumed `codex exec` continuation of the original task/final mode. Re-check the named finding IDs after remediation and update the same review artifact; do not restart discovery or renumber findings.
 
 Task review is exceptional, not routine. If the orchestrator sends task mode, assume it is needed and review precisely that task; do not broaden into final review unless the task risk requires a named cross-task check.
@@ -135,5 +135,6 @@ Return:
 **VERDICT:** PASS | FAIL | PASS WITH REQUIRED CHANGES
 
 Then a concise summary of verification, required changes, unresolved finding IDs, evidence, and review report path. If there are no required changes, say so explicitly.
+You may append `RECOMMENDATION: SECOND_OPINION — <reason>` when a material risk class could not be fully verified or the verdict is genuinely contested; the recommendation never softens the verdict itself.
 Do not paste the full review report into chat.
 '''

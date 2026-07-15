@@ -1,7 +1,7 @@
 ---
 name: orchestrator
 description: >-
-  Use this skill for essentially any software-engineering work: implementing a feature, making a non-trivial or multi-file change, fixing a user-reported bug, refactoring, adding an endpoint or UI component, or turning a rough idea into a plan. It makes Codex act as an orchestrator: triage the request, delegate discovery to codebase-explorer, have implementation-planner author a plan bundle with task briefs, dispatch task-implementer-bdd agents from those briefs, and run implementation-reviewer gates from task reports and diffs. Do not use it for quick factual or conceptual questions, library/API documentation lookups, or explanations of existing code that need no changes.
+  Use this skill for essentially any software-engineering work: implementing a feature, making a non-trivial or multi-file change, fixing a user-reported bug, refactoring, adding an endpoint or UI component, or turning a rough idea into a plan. It makes Codex act as an orchestrator: triage the request into the right lane (Quick for one cohesive bounded change; the full Plan, Implement, Review pipeline for larger work), delegate discovery to codebase-explorer, have implementation-planner author a plan bundle with task briefs, dispatch task-implementer-bdd agents from those briefs, and run implementation-reviewer gates from task reports and diffs. Do not use it for quick factual or conceptual questions, library/API documentation lookups, or explanations of existing code that need no changes.
 ---
 
 # Operating Model
@@ -121,7 +121,9 @@ plans/<slug>/
   task-<id>-report.md
   task-<id>-review.md
   final-review.md
+  second-review-final.md
   debug-diagnosis.md
+  second-diagnosis-<id>.md
   progress.md
 ```
 
@@ -147,7 +149,9 @@ Each artifact has one job. Do not let artifacts become competing summaries:
 - `task-<id>-report.md`: actual implementation delta — implementer owner target, changed files/symbols, tests, read ledger, decisions, concerns, and append-only remediation rounds.
 - `task-<id>-review.md`: reviewer owner target, stable finding IDs, verdict/evidence, and append-only re-review rounds for a task review only when task review is truly needed.
 - `final-review.md`: reviewer owner target, stable finding IDs, integrated verdict/evidence, and append-only re-review rounds for the completed plan.
+- `second-review-final.md`: verbatim-preserved independent second review (see Second Opinions) — findings and evidence only, never the verdict owner.
 - `debug-diagnosis.md`: root-cause evidence and fix direction when a diagnosis is complex or will feed planning.
+- `second-diagnosis-<id>.md`: verbatim-preserved independent second diagnosis consuming the first debugger's Hypotheses Handoff (see Second Opinions).
 - `progress.md`: coordination ledger only — status, dispatch backend, resumable implementer/reviewer owners, follow-up mechanism, every `codex-exec` job ID with terminal/cleanup state, artifact paths, planned/actual profiles, changed files/symbols, test summary, review status. No long prose.
 
 If a fact changes, update the owner artifact first, then update downstream briefs/reports only where the exact fact is load-bearing. Agent final messages stay minimal: status, artifact path, verification summary, changed/found items, needs.
@@ -199,10 +203,24 @@ The earlier the phase, the more acceptable broad discovery is. The later the pha
 |---|---|
 | Trivial edit/question | Direct. No pipeline. |
 | Pure codebase question | One `codebase-explorer` if needed. |
+| Single cohesive change, bounded scope | Quick. |
 | New feature / non-trivial change | Plan -> Implement -> Review. |
-| User-reported bug | Debug -> Implement, or Debug -> Plan -> Implement -> Review if broad. |
+| User-reported bug | Debug -> Quick, or Debug -> Plan -> Implement -> Review if broad. |
 
-Use the lightest lane that preserves quality. The biggest token win is not running a full pipeline when the work is genuinely small.
+Use the lightest lane that preserves quality. The biggest token win is not running a heavier lane than the work needs.
+
+## Lane: Quick
+
+For one cohesive change whose scope is bounded and knowable without a plan bundle. **Entry criteria (all must hold):** one cohesive task; the touch set is confidently known or discoverable with at most one focused `codebase-explorer` pass; no new public contracts, migrations, security surface, or cross-task interfaces; roughly <=3 files expected.
+
+Mechanics:
+
+1. Create `plans/quick-<slug>/brief.md` using the standard task-brief schema. No planner exists here, so the orchestrator owns routing: apply the Model Guidance selection method and write the compact routing record into the brief's Implementation Execution Profile — agent, model, reasoning effort, intelligence score, evidence-based rationale, escalation triggers. Report path: `plans/quick-<slug>/report.md`. The brief is a handoff, not a design: capture requirements, pointers, and tests; the implementer owns design within it. Run one focused explorer pass first only if the touch set is not already known.
+2. Capture the baseline SHA (`git rev-parse HEAD`) into the brief, then dispatch one `task-implementer-bdd` through the normal backend selection, record the backend/owner, and apply the standard passive wait.
+3. Verification: the implementer's BDD/TDD evidence plus the orchestrator running the brief's named checks. Task review only per the standard triggers (public/shared contract, security/data/migrations/concurrency/critical UI, `DONE_WITH_CONCERNS`, user request), with an independently selected reviewer profile; otherwise skip it.
+4. Remediation follows the normal agent-affinity protocol with the recorded owner.
+
+**Upgrade rule:** a `PACK_GAP`, scope growth beyond the entry criteria, or a second correction round means the lane was wrong — stop, run the Plan lane, and seed the bundle with the quick brief and report. The Quick lane removes bundle/planner overhead only; it never lowers the testing, honesty, or review bar.
 
 ## Lane: Plan -> Implement -> Review
 
@@ -265,6 +283,8 @@ After dispatching `implementation-planner`, wait for the plan bundle or question
 Before implementation, read `plan.md` and `global-constraints.md`, summarize the design, task waves, and routing choices, and get explicit user approval. Do not dispatch implementers before approval.
 
 ### 4. Implement From Briefs
+
+Before the first write dispatch of the workflow, capture `git rev-parse HEAD` and record it as `Baseline:` in `progress.md`. Reviews and scope checks pin to this SHA.
 
 For each task, dispatch `task-implementer-bdd` with:
 - the exact model and reasoning effort from the brief's implementation execution profile
@@ -334,16 +354,35 @@ Final review checks integration across tasks, runs relevant broader tests/Playwr
 
 For required changes from final review, map each finding ID to the owning task/implementer recorded in `progress.md`. Same-task findings go back to that original implementer through its recorded backend; cross-task or changed-contract findings go through fix-task triage. After remediation, resume the same final reviewer through its recorded backend to update `final-review.md` and the verdict.
 
+After the final verdict, check the Second Opinions criteria below and dispatch the adversarial second review when they are met.
+
 ### 7. Fix Loop
 
-Apply the agent-affinity protocol first: same-task findings return to the original implementer and then the original reviewer through their recorded backends. For cross-task, out-of-scope, or changed-contract findings already covered by a plan, have `implementation-planner` create or amend scoped fix briefs and select their implementation/review profiles. Without a covering plan, the orchestrator creates a compact execution contract and owns routing directly; do not add a planner only for model selection. Prefer one owner per cohesive fix batch. Cap repeated loops at 2-3 rounds before escalating.
+Apply the agent-affinity protocol first: same-task findings return to the original implementer and then the original reviewer through their recorded backends. For cross-task, out-of-scope, or changed-contract findings already covered by a plan, have `implementation-planner` create or amend scoped fix briefs and select their implementation/review profiles. Without a covering plan, the orchestrator creates a compact execution contract and owns routing directly; do not add a planner only for model selection. Prefer one owner per cohesive fix batch. Cap repeated loops at 2-3 rounds before escalating. Second-opinion findings enter this loop as ordinary required changes under the same shared cap.
+
+## Second Opinions
+
+Both paths below are orchestrator-owned unplanned work units: select their profiles with the Model Guidance selection method, record the routing decision, and preserve their output verbatim. Confirmed findings enter the normal fix loop under the shared 2-3 round cap; a second opinion never buys extra rounds.
+
+### Adversarial Second Review
+
+After a final-review verdict, check: security, data/migrations, concurrency, public contracts, or critical UX in scope; a contested or limitation-laden verdict; a reviewer `RECOMMENDATION: SECOND_OPINION`; or an explicit user request. If met (cap: one per final-review round), dispatch a second, independent `implementation-reviewer` — never the recorded final reviewer — at a profile of equal or higher rank than the final reviewer's (`gpt-5.6-terra`/`max` when the floor is unassessable), read-only, with the plan, constraints, baseline SHA, and the final review path, mandated to confirm or refute the existing findings and hunt real additional defects only (no restyling, no invented requirements). It writes `plans/<slug>/second-review-final.md`.
+
+Reconcile: the recorded final reviewer owns the verdict; the second review is evidence, never a verdict. Never drop a second-opinion finding silently. Evidence-confirmed findings enter the fix loop as ordinary required changes; a contested material finding triggers a targeted re-check by the recorded final reviewer ("confirm or refute finding X with evidence"); a still-contested material risk (security/data) is surfaced to the user with both positions.
+
+### Second Diagnosis
+
+When `root-cause-debugger` returns `BLOCKED` or Confidence below high, automatically dispatch a second, independent `root-cause-debugger` at a stronger profile than the first attempt, read-only, with the symptoms/repro and the first debugger's Hypotheses Handoff framed strictly as hypotheses and partial evidence to confirm, refute, or replace. It writes its structured diagnosis to `plans/<slug>/second-diagnosis-<id>.md` (cap: one per bug).
+
+Reconcile before choosing the fix path: agreement -> proceed on the confirmed diagnosis; disagreement -> resume the recorded first debugger to re-check the contested mechanism against the second's evidence; unresolved material disagreement -> Stop and Ask.
 
 ## Lane: Debug -> Implement / Plan
 
 1. Dispatch `root-cause-debugger` with symptoms, repro, logs, and any failing command. Provide observed facts and hypotheses only as hypotheses; do not pre-diagnose the root cause for the debugger. Provide `plans/<slug>/debug-diagnosis.md` only when the diagnosis is complex, broad, or will feed a plan; localized fixes may use the debugger's structured response directly.
-2. If localized, the orchestrator turns the debugger's Root Cause, Location, Mechanism, and Fix Direction into a compact execution contract, independently selects the best `task-implementer-bdd` profile, records the routing decision in the dispatch, and dispatches it directly. Do not add a planner solely for this transition. A genuinely trivial fix may instead switch explicitly to the Direct lane.
-3. If broad, run the Plan lane.
-4. If an external contract changed, run `integration-researcher` before planning or fixing.
+2. If the debugger returns `BLOCKED` or Confidence below high, run the Second Diagnosis path in Second Opinions and reconcile before choosing the fix path.
+3. If localized, run the Quick lane: the brief carries the debugger's Root Cause, Location, Mechanism, and Fix Direction, and the orchestrator selects and records the implementer profile. Do not add a planner solely for this transition. A genuinely trivial fix may instead switch explicitly to the Direct lane.
+4. If broad, run the Plan lane.
+5. If an external contract changed, run `integration-researcher` before planning or fixing.
 
 After dispatching `root-cause-debugger`, wait for the diagnosis. Do not investigate the same bug yourself during wait windows.
 
