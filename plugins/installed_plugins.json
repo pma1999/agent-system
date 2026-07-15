@@ -1,0 +1,79 @@
+{
+  "version": 2,
+  "plugins": {
+    "superpowers@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "C:\\Users\\Pablo\\.claude\\plugins\\cache\\claude-plugins-official\\superpowers\\6.1.1",
+        "version": "6.1.1",
+        "installedAt": "2026-04-01T12:31:13.869Z",
+        "lastUpdated": "2026-07-03T07:21:05.797Z",
+        "gitCommitSha": "dd237283dbfe466e11bd4be55acf14ecb8f6636e"
+      }
+    ],
+    "context7@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "C:\\Users\\Pablo\\.claude\\plugins\\cache\\claude-plugins-official\\context7\\unknown",
+        "version": "unknown",
+        "installedAt": "2026-06-16T10:17:18.965Z",
+        "lastUpdated": "2026-07-15T09:56:33.388Z"
+      }
+    ],
+    "playwright@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "C:\\Users\\Pablo\\.claude\\plugins\\cache\\claude-plugins-official\\playwright\\unknown",
+        "version": "unknown",
+        "installedAt": "2026-06-17T15:08:46.096Z",
+        "lastUpdated": "2026-07-15T09:56:33.307Z"
+      }
+    ],
+    "pyright-lsp@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "C:\\Users\\Pablo\\.claude\\plugins\\cache\\claude-plugins-official\\pyright-lsp\\1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-06-17T15:09:31.052Z",
+        "lastUpdated": "2026-06-17T15:09:31.052Z"
+      }
+    ],
+    "frontend-design@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "C:\\Users\\Pablo\\.claude\\plugins\\cache\\claude-plugins-official\\frontend-design\\unknown",
+        "version": "unknown",
+        "installedAt": "2026-06-17T15:20:03.455Z",
+        "lastUpdated": "2026-07-15T09:56:33.318Z"
+      }
+    ],
+    "codex@openai-codex": [
+      {
+        "scope": "user",
+        "installPath": "C:\\Users\\Pablo\\.claude\\plugins\\cache\\openai-codex\\codex\\1.0.5",
+        "version": "1.0.5",
+        "installedAt": "2026-07-02T07:24:40.172Z",
+        "lastUpdated": "2026-07-02T07:24:40.172Z",
+        "gitCommitSha": "80c31f99570876c3ef40327838b0a2ca1ae2cd9c"
+      }
+    ],
+    "skill-creator@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "C:\\Users\\Pablo\\.claude\\plugins\\cache\\claude-plugins-official\\skill-creator\\unknown",
+        "version": "unknown",
+        "installedAt": "2026-07-02T07:25:39.679Z",
+        "lastUpdated": "2026-07-15T09:56:33.291Z"
+      }
+    ],
+    "claude-md-management@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "C:\\Users\\Pablo\\.claude\\plugins\\cache\\claude-plugins-official\\claude-md-management\\1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-07-07T10:51:35.929Z",
+        "lastUpdated": "2026-07-07T10:51:35.929Z"
+      }
+    ]
+  }
+}
