@@ -1,19 +1,19 @@
 # Sistema multiagéntico personal (~/.claude + ~/.codex)
 
-Configuración versionada del sistema de orquestación multiagente para **Claude Code** y **Codex CLI**: `CLAUDE.md`/`AGENTS.md`, skill `orchestrator` (+ referencias), 6 agentes especialistas por lado, parches del plugin Codex y plantillas de configuración. Dos repos privados espejo:
+Configuración versionada del sistema de orquestación multiagente para **Claude Code** y **Codex CLI**: `CLAUDE.md`/`AGENTS.md`, skill `orchestrator` (+ referencias), 6 agentes especialistas por lado, parches del plugin Codex y plantillas de configuración. **Un único repo privado** con dos ramas:
 
-- `github.com/pma1999/claude-config` → se instala en `~/.claude` (este repo; incluye el instalador)
-- `github.com/pma1999/codex-config` → se instala en `~/.codex`
+- `github.com/pma1999/agent-system`, rama **`master`** → se instala en `~/.claude` (esta rama; incluye el instalador)
+- misma URL, rama **`codex`** → se instala en `~/.codex`
 
-`install.ps1` gestiona **los dos** a la vez.
+`install.ps1` gestiona **las dos carpetas** a la vez; tú solo tratas con un repo.
 
 ## Instalar en un PC nuevo (cualquier usuario)
 
 Requisitos: PowerShell 7 (`winget install Microsoft.PowerShell`), git (`winget install Git.Git`), Node LTS (`winget install OpenJS.NodeJS.LTS`), y acceso al repo privado (lo más cómodo: `winget install GitHub.cli` + `gh auth login`, que configura las credenciales de git). Claude Code y Codex CLI se instalan aparte como siempre.
 
 ```powershell
-git clone https://github.com/pma1999/claude-config.git "$env:TEMP\claude-config"
-pwsh -File "$env:TEMP\claude-config\install.ps1"
+git clone https://github.com/pma1999/agent-system.git "$env:TEMP\agent-system"
+pwsh -File "$env:TEMP\agent-system\install.ps1"
 ```
 
 El instalador convierte `~/.claude` y `~/.codex` en clones de los repos (haciendo copia de seguridad en `backup-preinstall-<fecha>/` de cualquier fichero previo que fuera a sobrescribir), fusiona las plantillas de configuración y aplica el parche del plugin si ya existe. Después:
@@ -36,7 +36,7 @@ O, dentro de Claude Code: `/sync-agent-system`.
 pwsh -File "$HOME/.claude/install.ps1" -Push -Message "descripcion del cambio"
 ```
 
-O `/sync-agent-system push`. Commitea y sube los dos repos. Si otro PC publicó antes, haz primero un update; si git avisa de divergencia: `git -C $HOME\.claude pull --rebase origin master` (ídem `.codex`).
+O `/sync-agent-system push`. Commitea y sube ambas ramas. Si otro PC publicó antes, haz primero un update; si git avisa de divergencia: `git -C $HOME\.claude pull --rebase origin master` (en `.codex`: `... pull --rebase origin codex`).
 
 ## Qué se sincroniza y qué no
 

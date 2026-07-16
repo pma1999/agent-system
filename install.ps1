@@ -9,8 +9,11 @@
     install.ps1 -Push              # commit & push local changes from this machine
     install.ps1 -Push -Message "x" # same, with a custom commit message
 
-  What it does in pull mode, per repo (~/.claude and ~/.codex):
-    1. git init + remote origin if missing (URLs below), core.autocrlf=false, identity.
+  Layout: ONE private repo (github.com/pma1999/agent-system) with two branches —
+  master mirrors ~/.claude (installer + README at its root), codex mirrors ~/.codex.
+
+  What it does in pull mode, per directory (~/.claude and ~/.codex):
+    1. git init + remote origin if missing, core.autocrlf=false, identity.
     2. Fresh machine: backs up any existing files that the repo would overwrite to
        backup-preinstall-<timestamp>/, then checks out master. Existing machine:
        fast-forward pull (refuses politely if you have uncommitted tracked changes).
@@ -29,20 +32,19 @@ param(
     [switch]$Push,
     [string]$Message = "sync: agent system update",
     [string]$GitHubUser = "pma1999",
-    [string]$ClaudeRemote,
-    [string]$CodexRemote,
+    # One repo, two branches: master = ~/.claude, codex = ~/.codex.
+    [string]$Remote,
     [switch]$SkipRepatch,
     # Root that contains .claude/.codex — override only for testing the installer itself.
     [string]$HomeDir = $HOME
 )
 
 $ErrorActionPreference = 'Stop'
-if (-not $ClaudeRemote) { $ClaudeRemote = "https://github.com/$GitHubUser/claude-config.git" }
-if (-not $CodexRemote)  { $CodexRemote  = "https://github.com/$GitHubUser/codex-config.git" }
+if (-not $Remote) { $Remote = "https://github.com/$GitHubUser/agent-system.git" }
 
 $repos = @(
-    [pscustomobject]@{ Name = '.claude'; Dir = Join-Path $HomeDir '.claude'; Remote = $ClaudeRemote },
-    [pscustomobject]@{ Name = '.codex';  Dir = Join-Path $HomeDir '.codex';  Remote = $CodexRemote }
+    [pscustomobject]@{ Name = '.claude'; Dir = Join-Path $HomeDir '.claude'; Remote = $Remote; Branch = 'master' },
+    [pscustomobject]@{ Name = '.codex';  Dir = Join-Path $HomeDir '.codex';  Remote = $Remote; Branch = 'codex' }
 )
 
 function Write-Step { param([string]$Text) Write-Host "==> $Text" -ForegroundColor Cyan }
@@ -59,8 +61,8 @@ function Initialize-Repo {
     param([pscustomobject]$Repo)
     New-Item -ItemType Directory -Force -Path $Repo.Dir | Out-Null
     if (-not (Test-Path (Join-Path $Repo.Dir '.git'))) {
-        git -C $Repo.Dir init --initial-branch=master *> $null
-        Write-Info "repo git inicializado"
+        git -C $Repo.Dir init --initial-branch=$($Repo.Branch) *> $null
+        Write-Info "repo git inicializado (rama $($Repo.Branch))"
     }
     git -C $Repo.Dir config core.autocrlf false
     if (-not (git -C $Repo.Dir config user.name))  { git -C $Repo.Dir config user.name  $GitHubUser }
@@ -80,9 +82,10 @@ function Sync-RepoPull {
     Write-Step "Sincronizando $($Repo.Name)"
     Initialize-Repo -Repo $Repo
 
-    git -C $Repo.Dir fetch origin master --quiet 2>$null
+    $branch = $Repo.Branch
+    git -C $Repo.Dir fetch origin $branch --quiet 2>$null
     if ($LASTEXITCODE -ne 0) {
-        Write-Warn2 "no se pudo hacer fetch de origin ($($Repo.Remote))."
+        Write-Warn2 "no se pudo hacer fetch de origin ($($Repo.Remote), rama $branch)."
         Write-Warn2 "¿Repo remoto creado y git autenticado? (gh auth login / credenciales git). Se continúa sin pull."
         return
     }
@@ -97,10 +100,10 @@ function Sync-RepoPull {
             return
         }
         $before = git -C $Repo.Dir rev-parse HEAD
-        git -C $Repo.Dir merge --ff-only origin/master --quiet
+        git -C $Repo.Dir merge --ff-only "origin/$branch" --quiet
         if ($LASTEXITCODE -ne 0) {
             Write-Warn2 "el historial local y el remoto han divergido; resuélvelo a mano:"
-            Write-Warn2 "  git -C $($Repo.Dir) pull --rebase origin master"
+            Write-Warn2 "  git -C $($Repo.Dir) pull --rebase origin $branch"
             return
         }
         $after = git -C $Repo.Dir rev-parse HEAD
@@ -109,7 +112,7 @@ function Sync-RepoPull {
     }
     else {
         # Fresh machine: materialize the repo into a possibly non-empty directory.
-        $tracked = git -C $Repo.Dir ls-tree -r --name-only origin/master
+        $tracked = git -C $Repo.Dir ls-tree -r --name-only "origin/$branch"
         $conflicts = @($tracked | Where-Object { Test-Path (Join-Path $Repo.Dir $_) })
         if ($conflicts.Count -gt 0) {
             $backup = Join-Path $Repo.Dir ("backup-preinstall-" + (Get-Date -Format 'yyyyMMdd-HHmmss'))
@@ -121,10 +124,10 @@ function Sync-RepoPull {
             }
             Write-Info "copia de seguridad de $($conflicts.Count) fichero(s) preexistente(s) en $backup"
         }
-        git -C $Repo.Dir checkout -f -B master origin/master --quiet
+        git -C $Repo.Dir checkout -f -B $branch "origin/$branch" --quiet
         Write-Info "instalado en $($Repo.Dir) ($((git -C $Repo.Dir rev-parse --short HEAD)))"
     }
-    git -C $Repo.Dir branch --set-upstream-to=origin/master master *> $null
+    git -C $Repo.Dir branch --set-upstream-to="origin/$branch" $branch *> $null
 }
 
 function Sync-RepoPush {
@@ -140,12 +143,12 @@ function Sync-RepoPush {
     else {
         Write-Info "sin cambios locales"
     }
-    git -C $Repo.Dir push -u origin master --quiet
+    git -C $Repo.Dir push -u origin $($Repo.Branch) --quiet
     if ($LASTEXITCODE -ne 0) {
         Write-Warn2 "push falló. ¿Repo remoto creado ($($Repo.Remote)) y autenticación git/gh lista?"
     }
     else {
-        Write-Info "push OK -> $($Repo.Remote)"
+        Write-Info "push OK -> $($Repo.Remote) (rama $($Repo.Branch))"
     }
 }
 

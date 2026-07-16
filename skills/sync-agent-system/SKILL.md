@@ -5,7 +5,7 @@ description: Sync the personal multi-agent system config across machines — the
 
 # Sync Agent System
 
-`~/.claude` and `~/.codex` are git clones of `pma1999/claude-config` and `pma1999/codex-config` (private). One script manages both; full docs in `~/.claude/README.md`.
+`~/.claude` and `~/.codex` are git checkouts of one private repo, `pma1999/agent-system` — branch `master` mirrors `~/.claude`, branch `codex` mirrors `~/.codex`. One script manages both; full docs in `~/.claude/README.md`.
 
 ## Update this machine (default)
 
