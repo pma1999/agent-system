@@ -1,0 +1,43 @@
+# System keys for the multi-agent setup. Merged ADDITIVELY into ~/.codex/config.toml
+# by ~/.claude/install.ps1: missing top-level keys are prepended, missing [tables]
+# appended, existing values are NEVER overwritten. Machine-specific state (project
+# trust, notify, plugins, runtimes) never lives here.
+
+model = "gpt-5.6-sol"
+model_reasoning_effort = "max"
+plan_mode_reasoning_effort = "max"
+approval_policy = "never"
+
+[features]
+multi_agent = true
+
+[mcp_servers.codegraph]
+command = "codegraph"
+args = ["serve", "--mcp"]
+
+[mcp_servers.codegraph.tools.codegraph_status]
+approval_mode = "approve"
+
+[mcp_servers.codegraph.tools.codegraph_context]
+approval_mode = "approve"
+
+[mcp_servers.codegraph.tools.codegraph_files]
+approval_mode = "approve"
+
+[mcp_servers.codegraph.tools.codegraph_search]
+approval_mode = "approve"
+
+[mcp_servers.codegraph.tools.codegraph_impact]
+approval_mode = "approve"
+
+[mcp_servers.codegraph.tools.codegraph_node]
+approval_mode = "approve"
+
+[mcp_servers.codegraph.tools.codegraph_callers]
+approval_mode = "approve"
+
+[mcp_servers.codegraph.tools.codegraph_callees]
+approval_mode = "approve"
+
+[mcp_servers.codegraph.tools.codegraph_explore]
+approval_mode = "approve"

@@ -1,9 +1,13 @@
 # Whitelist strategy: ignore everything, then re-include the agent-system files.
-# Sessions, sqlite state, logs, auth, and Codex-managed bundles must never be committed.
+# Sessions, sqlite state, logs, auth, and machine-specific config.toml must never
+# be committed — config.toml is merged per machine by ~/.claude/install.ps1 from
+# templates/config.toml (additive: model/effort, multi_agent, codegraph MCP).
 /*
 !/.gitignore
+!/.gitattributes
+!/README.md
 !/AGENTS.md
-!/config.toml
 !/agents/
 !/skills/
 /skills/.system/
+!/templates/
