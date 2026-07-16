@@ -32,7 +32,7 @@ Goal: one-command install/update/publish on any PC/user. Delivered additively (n
 
 | Piece | What |
 |---|---|
-| Remotes | private GitHub `pma1999/claude-config` + `pma1999/codex-config`; in-place repos push/pull directly |
+| Remote | ONE private GitHub repo `pma1999/agent-system` (user decision 2026-07-16: single repo): branch `master` = ~/.claude (installer at root), branch `codex` = ~/.codex; in-place repos push/pull their branch directly. Published + pull-verified same day. |
 | `install.ps1` (~/.claude, tracked) | idempotent: init/clone-into-place with `backup-preinstall-<ts>/` for conflicting preexisting files, ff-only pull with dirty/diverged guards, additive config merges, repatch attempt, `-Push` publish mode, `-HomeDir` for self-testing |
 | `templates/settings.json` + `templates/config.toml` | system keys only; real `settings.json`/`config.toml` + `plugins/*.json` untracked (machine state: hooks, trust, runtimes stay local); merge = fill-missing + array-union, never overwrites |
 | `patches/codex-plugin-agent-flag-patch.md` | tracked mirror of the recovery memory note (works on machines without auto-memory) |
