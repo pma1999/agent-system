@@ -3,7 +3,7 @@
 # appended, existing values are NEVER overwritten. Machine-specific state (project
 # trust, notify, plugins, runtimes) never lives here.
 
-model = "gpt-5.6-sol"
+model = "gpt-5.6-luna"
 model_reasoning_effort = "max"
 plan_mode_reasoning_effort = "max"
 approval_policy = "never"

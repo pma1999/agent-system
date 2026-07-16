@@ -46,7 +46,7 @@ Relevant upstream state at the snapshot date:
 
 ## Native Readiness Contract
 
-Adopt the fully native path when one installed release satisfies all of these conditions in a fresh top-level Sol session:
+Adopt the fully native path when one installed release satisfies all of these conditions in a fresh top-level session at the config-default model:
 
 - The callable spawn schema supports the configured custom role plus explicit `model` and `reasoning_effort`.
 - A context-free custom-role spawn runs the exact requested model and reasoning effort.
@@ -68,7 +68,7 @@ Before editing local files:
 
 1. Record `codex --version` and the Codex Desktop build when applicable.
 2. Read the current official [subagent configuration documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents), release notes, and the linked upstream issues/PRs.
-3. Inspect the model-visible native spawn schema in a fresh GPT-5.6 Sol session.
+3. Inspect the model-visible native spawn schema in a fresh top-level session.
 4. Record the currently supported V2 namespace and feature configuration.
 5. Compare the released source or tagged source with the installed behavior when the result is ambiguous.
 
@@ -76,10 +76,10 @@ This establishes which configuration keys are still part of the supported native
 
 ### 2. Run a bounded native smoke test
 
-Create or reuse a temporary custom role whose instructions produce a deterministic response and whose TOML leaves `model` and `model_reasoning_effort` unset. From a Sol parent, start it with:
+Create or reuse a temporary custom role whose instructions produce a deterministic response and whose TOML leaves `model` and `model_reasoning_effort` unset. From a top-level parent at the config-default model, start it with:
 
 - `agent_type`: the temporary custom role;
-- `model`: `gpt-5.6-luna`;
+- `model`: a model different from the parent's config default (e.g. `gpt-5.6-terra` when the default is `gpt-5.6-luna`);
 - `reasoning_effort`: `low`;
 - `fork_turns`: `none`;
 - a prompt requiring one exact short response.
@@ -88,13 +88,13 @@ Verify:
 
 1. The spawn call includes every requested routing value.
 2. The child has the custom role and instructions.
-3. The child actually runs Luna/low.
+3. The child actually runs the dispatched pair.
 4. `followup_task` on the returned target triggers a second turn in the same child.
-5. The second turn retains Luna/low and the first-turn context.
+5. The second turn retains the dispatched pair and the first-turn context.
 
 Run two controls:
 
-- a built-in `worker` with the same Luna/low pair;
+- a built-in `worker` with the same dispatched pair;
 - `implementation-planner` at Sol/xhigh.
 
 If the documented native contract supports partial locks, also verify a role that fixes only model and a role that fixes only reasoning. Confirm each field independently.
