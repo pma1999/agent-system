@@ -14,7 +14,7 @@ The installed Codex plugin (`~/.claude/plugins/cache/openai-codex/codex/<version
 6. `scripts/codex-companion.mjs` — `buildTaskRequest` carries `agent` and `developerInstructions` fields (null defaults).
 7. `scripts/codex-companion.mjs` — `executeTaskRun` computes `developerInstructions = request.developerInstructions ?? (request.agent ? loadAgentDeveloperInstructions(request.agent) : null)` (background workers re-resolve from the persisted request) and passes it into `runAppServerTurn`.
 
-**Purpose 2 — accept `max` reasoning effort.** `VALID_REASONING_EFFORTS` gains `"max"`; the error string gains `, max`. Needed because `~/.codex/config.toml` defaults to Sol/max and users may explicitly request max. Model compatibility stays runtime-validated. (The orchestrator's Codex *planning preset* is `sol/xhigh` — the max edit is not for planning.)
+**Purpose 2 — accept `max` reasoning effort.** `VALID_REASONING_EFFORTS` gains `"max"`; the error string gains `, max`. Needed because `~/.codex/config.toml` defaults to Luna/max and users may explicitly request max. Model compatibility stays runtime-validated. (The orchestrator's Codex *planning preset* is `sol/xhigh` — the max edit is not for planning.)
 
 **Purpose 3 — rescue agent on haiku.** `agents/codex-rescue.md` frontmatter `model: sonnet` → `model: haiku` (non-core edit "docs: rescue agent haiku model"): the rescue subagent is a mechanical forwarder (launch job → `status --wait` loop → `result`), so haiku suffices. If a future plugin version changes the forwarder into something judgment-bearing, drop this edit.
 

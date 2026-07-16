@@ -41,6 +41,8 @@ Goal: one-command install/update/publish on any PC/user. Delivered additively (n
 
 Verification: parse OK; skill "valid!"; live run on this machine (graceful no-remote path, merges no-op, patcher all-already); **fresh-machine sandbox test** via `-HomeDir` with conflicting local configs → local values preserved (model, theme, hooks, project trust), system keys/tables inserted correctly (top-level before tables, `multi_agent` into existing `[features]`, codegraph tables appended), second run idempotent ("sin cambios"); live configs hash-identical after all tests.
 
+2026-07-16 (user decision): Codex session/orchestrator default = **gpt-5.6-luna / max** (live config.toml + templates/config.toml; effort was found at medium after a UI model switch and raised to max). Planner dispatch preset stays sol/xhigh; sol remains planner-reserved. Docs that cited "Sol/max default" updated (repatch skill, patch-recovery doc + memory, agent-system memory, migration smoke test made parent-model-agnostic).
+
 ## Deferred / user-runnable (live checks not executable from this session)
 
 The auto-mode classifier denies launching Codex runs from here; these are the printed one-liners, cheap to run manually when convenient:

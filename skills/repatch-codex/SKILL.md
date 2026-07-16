@@ -5,7 +5,7 @@ description: Re-apply the local Codex plugin compatibility patch (`--agent` inje
 
 # Repatch Codex Plugin
 
-The installed Codex plugin carries a local compatibility patch that (1) adds `--agent <name>` to the companion `task` command (native injection of `~/.codex/agents/<name>.toml` `developer_instructions` via app-server `developerInstructions`), (2) accepts the model-dependent `max` reasoning effort (needed for `~/.codex/config.toml`'s Sol/max default and explicit max requests), and (3) sets the mechanical `codex-rescue` forwarder to haiku. Plugin updates wipe the cache copy; this skill restores all three.
+The installed Codex plugin carries a local compatibility patch that (1) adds `--agent <name>` to the companion `task` command (native injection of `~/.codex/agents/<name>.toml` `developer_instructions` via app-server `developerInstructions`), (2) accepts the model-dependent `max` reasoning effort (needed for `~/.codex/config.toml`'s Luna/max default and explicit max requests), and (3) sets the mechanical `codex-rescue` forwarder to haiku. Plugin updates wipe the cache copy; this skill restores all three.
 
 ## Steps
 
