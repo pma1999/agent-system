@@ -1,16 +1,17 @@
 # Whitelist strategy: ignore everything, then re-include the agent-system files.
-# Runtime state, caches, transcripts, and credentials must never be committed.
+# Runtime state, caches, transcripts, credentials, and machine-specific config
+# (settings.json, plugins/*.json) must never be committed — settings.json is
+# reconstructed per machine by install.ps1 from templates/settings.json.
 /*
 !/.gitignore
+!/.gitattributes
 !/CLAUDE.md
-!/settings.json
+!/README.md
+!/install.ps1
 !/statusline.py
 !/agents/
 !/skills/
 !/rules/
 !/patches/
 !/plans/
-!/plugins/
-/plugins/*
-!/plugins/installed_plugins.json
-!/plugins/known_marketplaces.json
+!/templates/

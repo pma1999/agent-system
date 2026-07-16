@@ -26,6 +26,21 @@ Baselines: `.claude` @ 43425ce, `.codex` @ 606f754 (root commits, pre-change sna
 - Sizes: fixed per-session context (CLAUDE.md + Claude SKILL core) 53.9 KB → 37.1 KB (−31%); each subagent spawn additionally saves 7.1 KB of CLAUDE.md; Codex templates (15.5 KB) now load only on Codex dispatch. AGENTS.md 15.0 → 9.8 KB (−34%; 4.3 KB of that is tool-owned marker blocks). Codex SKILL grew 40.4 → 45.6 KB by design (Quick + Second Opinions are new capability).
 - `node --check` clean on both patch scripts.
 
+## Distribution phase (2026-07-16)
+
+Goal: one-command install/update/publish on any PC/user. Delivered additively (no existing-skill restructuring; two surgical `$HOME`/`~` path generalizations in repatch-codex SKILL + codex-delegation ref were required for other-user portability — zero behavior change on this machine).
+
+| Piece | What |
+|---|---|
+| Remotes | private GitHub `pma1999/claude-config` + `pma1999/codex-config`; in-place repos push/pull directly |
+| `install.ps1` (~/.claude, tracked) | idempotent: init/clone-into-place with `backup-preinstall-<ts>/` for conflicting preexisting files, ff-only pull with dirty/diverged guards, additive config merges, repatch attempt, `-Push` publish mode, `-HomeDir` for self-testing |
+| `templates/settings.json` + `templates/config.toml` | system keys only; real `settings.json`/`config.toml` + `plugins/*.json` untracked (machine state: hooks, trust, runtimes stay local); merge = fill-missing + array-union, never overwrites |
+| `patches/codex-plugin-agent-flag-patch.md` | tracked mirror of the recovery memory note (works on machines without auto-memory) |
+| `/sync-agent-system` skill (new) | wraps install.ps1 pull/push from inside Claude Code |
+| `.gitattributes` `* -text` + `core.autocrlf false` | byte-stable files cross-machine |
+
+Verification: parse OK; skill "valid!"; live run on this machine (graceful no-remote path, merges no-op, patcher all-already); **fresh-machine sandbox test** via `-HomeDir` with conflicting local configs → local values preserved (model, theme, hooks, project trust), system keys/tables inserted correctly (top-level before tables, `multi_agent` into existing `[features]`, codegraph tables appended), second run idempotent ("sin cambios"); live configs hash-identical after all tests.
+
 ## Deferred / user-runnable (live checks not executable from this session)
 
 The auto-mode classifier denies launching Codex runs from here; these are the printed one-liners, cheap to run manually when convenient:

@@ -63,7 +63,7 @@ Resolve the optional model/effort flags from the user's request:
 | Effort only | `--effort <requested>`; leave model unset |
 | Model and effort | pass both requested values |
 
-These overrides belong only to the planner run. `--agent implementation-planner` injects `C:\Users\Pablo\.codex\agents\implementation-planner.toml` as developer instructions; do not modify that TOML for this Claude-only routing feature — the XML contract below supplies the two-engine routing delta. The Codex planner owns the normal bundle (`plan.md`, `global-constraints.md`, task briefs, initialized `progress.md`); its stdout is only a completion pointer or numbered product questions. Record provenance in `progress.md`: engine `codex`, only flags actually passed, fallback `none`. Product questions, `PACK_GAP`, or `NEEDS_CONTEXT` are not runtime failures — resolve them normally (`--resume` only if this was the immediately preceding Codex run). Runtime failure handling: skill core, Degradation.
+These overrides belong only to the planner run. `--agent implementation-planner` injects `~/.codex/agents/implementation-planner.toml` as developer instructions; do not modify that TOML for this Claude-only routing feature — the XML contract below supplies the two-engine routing delta. The Codex planner owns the normal bundle (`plan.md`, `global-constraints.md`, task briefs, initialized `progress.md`); its stdout is only a completion pointer or numbered product questions. Record provenance in `progress.md`: engine `codex`, only flags actually passed, fallback `none`. Product questions, `PACK_GAP`, or `NEEDS_CONTEXT` are not runtime failures — resolve them normally (`--resume` only if this was the immediately preceding Codex run). Runtime failure handling: skill core, Degradation.
 
 ```text
 --wait --write --fresh --agent implementation-planner <resolved model/effort flags>
@@ -151,7 +151,7 @@ Fix Direction (symbol-addressed); Disagreements with the prior investigation (or
 
 ## Template: Peer Implementer (write-capable)
 
-`--agent task-implementer-bdd` makes the runtime resolve `C:\Users\Pablo\.codex\agents\task-implementer-bdd.toml` and inject its `developer_instructions` natively at thread start; no file-read instruction is needed (patch dependency above). `--model`/`--effort` come from the brief's `## Implementer` profile; if the brief lacks one, either have the planner/orchestrator assign it or dispatch flag-free and log `profile: config-default`. The sole-writer rule applies for the whole run.
+`--agent task-implementer-bdd` makes the runtime resolve `~/.codex/agents/task-implementer-bdd.toml` and inject its `developer_instructions` natively at thread start; no file-read instruction is needed (patch dependency above). `--model`/`--effort` come from the brief's `## Implementer` profile; if the brief lacks one, either have the planner/orchestrator assign it or dispatch flag-free and log `profile: config-default`. The sole-writer rule applies for the whole run.
 
 ```text
 --wait --write --agent task-implementer-bdd --model <model> --effort <effort>

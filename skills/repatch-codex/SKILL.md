@@ -12,14 +12,14 @@ The installed Codex plugin carries a local compatibility patch that (1) adds `--
 1. Run the idempotent patcher:
 
 ```bash
-node "C:\Users\Pablo\.claude\patches\codex-plugin-agent-patch.mjs"
+node "$HOME/.claude/patches/codex-plugin-agent-patch.mjs"
 ```
 
 It auto-detects the newest version under `~/.claude/plugins/cache/openai-codex/codex/`, applies only missing edits (`applied` / `already`), then runs a syntax check and a loader check. `--dry-run` previews; `--dir <path>` overrides the target.
 
 2. Read the output:
    - All `applied`/`already` + syntax, loader, and effort checks OK → done. Tell the user the patch is in place.
-   - Any `FAILED` core edit → the new plugin version drifted. Do NOT guess-edit: open the memory note `codex-plugin-agent-flag-patch` (in `~/.claude/projects/C--Users-Pablo/memory/`) which describes each edit's intent, adapt the anchors in `codex-plugin-agent-patch.mjs` to the new code, re-run, and update that memory if anchors changed.
+   - Any `FAILED` core edit → the new plugin version drifted. Do NOT guess-edit: open `~/.claude/patches/codex-plugin-agent-flag-patch.md` (tracked mirror of the memory note of the same name), which describes each edit's intent; adapt the anchors in `codex-plugin-agent-patch.mjs` to the new code, re-run, and update that doc if anchors changed.
    - `WARNING` on docs edits is cosmetic; fix opportunistically.
 
 3. If runtime behavior is in doubt, run the live checks printed by the script:
@@ -33,7 +33,7 @@ The Codex dispatch templates in `~/.claude/skills/orchestrator/references/codex-
 While doing plugin/system maintenance, also run the role-file drift detector:
 
 ```bash
-node "C:\Users\Pablo\.claude\patches\agent-parity-check.mjs"
+node "$HOME/.claude/patches/agent-parity-check.mjs"
 ```
 
 It compares each `~/.claude/agents/<role>.md` with its `~/.codex/agents/<role>.toml` twin section by section. Investigate new drift or unexpected one-sided sections; intentional cross-CLI differences are normal and stay.
