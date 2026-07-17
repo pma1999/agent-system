@@ -43,6 +43,8 @@ Verification: parse OK; skill "valid!"; live run on this machine (graceful no-re
 
 2026-07-16 (user decision): Codex session/orchestrator default = **gpt-5.6-luna / max** (live config.toml + templates/config.toml; effort was found at medium after a UI model switch and raised to max). Planner dispatch preset stays sol/xhigh; sol remains planner-reserved. Docs that cited "Sol/max default" updated (repatch skill, patch-recovery doc + memory, agent-system memory, migration smoke test made parent-model-agnostic).
 
+2026-07-17 (user decision + data): intelligence scale extended with **Sol tiers and per-task USD costs** (user-supplied benchmark table). Pareto analysis added everywhere the scale lives (codex-delegation.md, Codex SKILL Model Guidance, Codex planner TOML — 3 synchronized copies): efficient ladder `luna/low→…→luna/max→sol/medium→sol/high→sol/xhigh→sol/max`; **all 5 terra pairs + sol/low are cost-dominated → "never select"**; marginal $/point doubles per rung ($0.002→$0.29). Sol de-reserved (planner preset stays sol/xhigh; unassessable-floor fallback terra/max → **sol/high**, smarter and cheaper). Claude planner brief rule + Claude SKILL Profiles bullet updated to ladder-only pairs; review/diagnosis profile hints re-anchored (rank ≤3 → luna/max+, rank ≤5 → luna/xhigh+). Memory note updated.
+
 ## Deferred / user-runnable (live checks not executable from this session)
 
 The auto-mode classifier denies launching Codex runs from here; these are the printed one-liners, cheap to run manually when convenient:

@@ -13,36 +13,47 @@ Read this file before composing any Codex dispatch. Policy (the four sanctioned 
 
 ## Profile Routing (model/effort per dispatch)
 
-Every Codex dispatch carries an explicitly selected `--model`/`--effort` pair from this user-approved intelligence scale:
+Every Codex dispatch carries an explicitly selected `--model`/`--effort` pair from this user-approved scale (intelligence = capability score; cost = approx. USD per task):
 
-| Rank | Model / reasoning effort | Intelligence |
-|---:|---|---:|
-| 1 | `gpt-5.6-terra` / `max` | 55 |
-| 2 | `gpt-5.6-luna` / `max` | 52 |
-| 3 | `gpt-5.6-terra` / `xhigh` | 51 |
-| 4 | `gpt-5.6-luna` / `xhigh` | 49 |
-| 5 | `gpt-5.6-terra` / `high` | 49 |
-| 6 | `gpt-5.6-luna` / `high` | 46 |
-| 7 | `gpt-5.6-terra` / `medium` | 46 |
-| 8 | `gpt-5.6-terra` / `low` | 40 |
-| 9 | `gpt-5.6-luna` / `medium` | 38 |
-| 10 | `gpt-5.6-luna` / `low` | 33 |
+| Model / reasoning effort | Intelligence | ~$/task | Quality/price verdict |
+|---|---:|---:|---|
+| `gpt-5.6-sol` / `max` | 58.89 | 1.037 | frontier — absolute ceiling; ~$0.29 per marginal point |
+| `gpt-5.6-sol` / `xhigh` | 57.65 | 0.682 | frontier |
+| `gpt-5.6-sol` / `high` | 55.87 | 0.453 | frontier — best high-end value; unassessable-floor default |
+| `gpt-5.6-terra` / `max` | 54.95 | 0.554 | dominated by sol/high (smarter and cheaper) — never select |
+| `gpt-5.6-sol` / `medium` | 53.59 | 0.314 | frontier |
+| `gpt-5.6-terra` / `xhigh` | 51.60 | 0.327 | dominated by sol/medium — never select |
+| `gpt-5.6-luna` / `max` | 51.24 | 0.209 | frontier |
+| `gpt-5.6-sol` / `low` | 49.44 | 0.197 | avoid — luna/max gives +1.8 points for +$0.012 |
+| `gpt-5.6-luna` / `xhigh` | 49.07 | 0.139 | frontier — strong value |
+| `gpt-5.6-terra` / `high` | 48.95 | 0.236 | dominated by luna/xhigh (equal intelligence, 1.7x price) — never select |
+| `gpt-5.6-luna` / `high` | 46.06 | 0.095 | frontier — best quality/price knee |
+| `gpt-5.6-terra` / `medium` | 45.57 | 0.128 | dominated by luna/high — never select |
+| `gpt-5.6-terra` / `low` | 40.47 | 0.101 | dominated by luna/high (same price, +5.6 points) — never select |
+| `gpt-5.6-luna` / `medium` | 38.05 | 0.050 | frontier |
+| `gpt-5.6-luna` / `low` | 33.26 | 0.040 | frontier — cheapest |
+
+**Efficient ladder** — the only selectable rungs; every Terra pair and sol/low is beaten on both axes (or within noise for >40% more cost) by a rung here:
+
+`luna/low` -> `luna/medium` -> `luna/high` -> `luna/xhigh` -> `luna/max` -> `sol/medium` -> `sol/high` -> `sol/xhigh` -> `sol/max`
+
+The marginal cost per intelligence point roughly doubles at each rung ($0.002 -> 0.006 -> 0.015 -> 0.032 -> 0.045 -> 0.061 -> 0.13 -> 0.29): climbing through Luna is cheap; each Sol rung must be bought by a concrete named risk, and sol/max only when the last point genuinely changes the outcome.
 
 Selection method — treat intelligence as a capability floor, not a score to maximize:
 
 1. Assess the work unit on scope/coupling, ambiguity/novelty, correctness/blast-radius risk, and verification difficulty.
 2. Take the highest load-bearing demand. Scores are ordinal, not additive: do not average dimensions; move up when several difficult dimensions interact or a failure would be hard to detect or reverse.
-3. Choose the lowest-intelligence approved pair that safely clears that demand — excess capability is never bought without a task-specific quality reason.
-4. At equal intelligence, choose by task fit, then the lower reasoning effort. Do not invent price, latency, or specialization claims. Luna is eligible at every listed effort; never treat it as simple-task-only.
-5. If the floor or fit cannot be assessed confidently, use `gpt-5.6-terra` / `max`.
+3. Choose the lowest efficient-ladder rung that safely clears that demand — never a dominated pair, never excess capability without a task-specific quality reason.
+4. Cost is real data: at a comparable floor take the cheaper rung. Do not invent latency or specialization claims. Luna is eligible at every listed effort; never treat it as simple-task-only.
+5. If the floor or fit cannot be assessed confidently, use `gpt-5.6-sol` / `high`; escalate to `xhigh`/`max` only when the verdict itself is critical.
 
-Calibration anchors: **33** mechanical single-target work, exact pattern and tests; **38-40** bounded local work, small judgment calls; **46** moderate multi-symbol/multi-file work, known architecture, routine integration; **49** complex cross-component behavior, shared contracts, difficult state/error/UI/data reasoning; **51-52** very complex or high-risk work — security/migration/concurrency/public-contract concerns, broad impact; **55** exceptional ambiguity, novelty, blast radius, or an unassessable floor.
+Calibration anchors: **33** mechanical single-target work, exact pattern and tests; **38-40** bounded local work, small judgment calls; **46** moderate multi-symbol/multi-file work, known architecture, routine integration; **49** complex cross-component behavior, shared contracts, difficult state/error/UI/data reasoning; **51-54** very complex or high-risk work — security/migration/concurrency/public-contract concerns, broad impact; **56-59** exceptional ambiguity, novelty, blast radius, or a critical cross-system verdict.
 
 Ownership and recording:
 
 - **Planned tasks:** the planner selects the profile in each Codex-assigned brief's `## Implementer` line (`codex — <model>/<effort>; floor <score>: <one-line reason>`). The orchestrator dispatches exactly that pair or overrides with a logged reason.
-- **Unplanned work** (adversarial review, second diagnosis, Quick-lane or fix briefs routed to Codex): the orchestrator selects at dispatch time and records `profile: <model>/<effort> (<score>) — <reason>` in `progress.md` (or the quick folder's ledger). Reviews guarding material risk typically need rank ≤3; size independently, never inherit the implementer's profile.
-- **Reserved:** `gpt-5.6-sol` is the planner-role model only; never select it for any other dispatch (matches the Codex-native fixed planner profile).
+- **Unplanned work** (adversarial review, second diagnosis, Quick-lane or fix briefs routed to Codex): the orchestrator selects at dispatch time and records `profile: <model>/<effort> (<score>) — <reason>` in `progress.md` (or the quick folder's ledger). Reviews guarding material risk typically need luna/max or above; size independently, never inherit the implementer's profile.
+- **Planner preset:** the planner role keeps its fixed `sol`/`xhigh` dispatch preset (matches the Codex-native fixed planner profile). Sol is not otherwise exclusive: any dispatch whose floor exceeds luna/max (51.2) selects the sol rung it needs.
 - **Fallback:** a dispatch without flags legally falls through to `~/.codex/config.toml` defaults — log it as `profile: config-default` and treat it as an omission to fix, not a routing decision.
 - Planner runtime flags are provenance only: never copy them into briefs, the 50/50 tally, peer-implementer prompts, review, or diagnosis.
 
@@ -85,8 +96,9 @@ the engine opposite the failed attempt. Balance every remaining task near 50/50 
 effort, never by perceived capability, type, size, or difficulty. Never split one brief.
 Codex-assigned briefs must be fully self-contained and must include a `## Implementer`
 model/effort profile chosen from the approved scale: `codex — <model>/<effort>; floor
-<score>: <one-line reason>` (approved pairs: terra or luna at max/xhigh/high/medium/low;
-sol is reserved for the planner role; lowest pair that safely clears the task's demand).
+<score>: <one-line reason>` (approved pairs: the efficient ladder only — luna at any
+effort, sol at medium/high/xhigh/max; every terra pair and sol/low is cost-dominated and
+must never be selected; lowest rung that safely clears the task's demand).
 
 `plan.md` must state tasks/waves, contract independence, cross-task interfaces, verification,
 the task/effort split per engine, deviations from 50/50, and whether adversarial-review risk
@@ -111,7 +123,7 @@ numbered questions.</compact_output_contract>
 
 ## Template: Adversarial Review (read-only)
 
-Profile: orchestrator-selected per Profile Routing (material-risk scope typically rank ≤3; `terra/max` when the floor is unassessable). Persist stdout verbatim to `plans/<slug>/codex-review-<id|final>.md`.
+Profile: orchestrator-selected per Profile Routing (material-risk scope typically luna/max or above; `sol/high` when the floor is unassessable). Persist stdout verbatim to `plans/<slug>/codex-review-<id|final>.md`.
 
 ```text
 --wait --fresh --model <model> --effort <effort>
@@ -131,7 +143,7 @@ uncertainty inline.</default_follow_through_policy>
 
 ## Template: Second Diagnosis (read-only)
 
-Profile: orchestrator-selected per Profile Routing (typically rank ≤5; escalate for intermittent/concurrency mechanisms). Persist stdout verbatim to `plans/<slug>/codex-diagnosis-<id>.md`.
+Profile: orchestrator-selected per Profile Routing (typically luna/xhigh or above; escalate for intermittent/concurrency mechanisms). Persist stdout verbatim to `plans/<slug>/codex-diagnosis-<id>.md`.
 
 ```text
 --wait --fresh --model <model> --effort <effort>
