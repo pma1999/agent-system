@@ -419,20 +419,31 @@ Always set both the model and reasoning effort explicitly. Omitted values can in
 - Dispatch the exact selected profile. If later evidence changes complexity, risk, or scope, have the original routing owner re-evaluate: planner amendment for planned work, replacement dispatch record for unplanned work.
 - Apply the pair with `native-collab` when its schema supports explicit role/model/effort; otherwise start a persistent `scripts/invoke-specialist.ps1` job, block with `-Wait`, and retain its resumable thread UUID. Stop with a routing-capability gap only when neither backend works. Never record a selected pair as actual when the runtime used a fallback.
 
-Use this approved intelligence scale:
+Use this approved scale (intelligence = capability score; cost = approx. USD per task):
 
-| Rank | Model / reasoning effort | Intelligence |
-|---:|---|---:|
-| 1 | `gpt-5.6-terra` / `max` | 55 |
-| 2 | `gpt-5.6-luna` / `max` | 52 |
-| 3 | `gpt-5.6-terra` / `xhigh` | 51 |
-| 4 | `gpt-5.6-luna` / `xhigh` | 49 |
-| 5 | `gpt-5.6-terra` / `high` | 49 |
-| 6 | `gpt-5.6-luna` / `high` | 46 |
-| 7 | `gpt-5.6-terra` / `medium` | 46 |
-| 8 | `gpt-5.6-terra` / `low` | 40 |
-| 9 | `gpt-5.6-luna` / `medium` | 38 |
-| 10 | `gpt-5.6-luna` / `low` | 33 |
+| Model / reasoning effort | Intelligence | ~$/task | Quality/price verdict |
+|---|---:|---:|---|
+| `gpt-5.6-sol` / `max` | 58.89 | 1.037 | frontier — absolute ceiling; ~$0.29 per marginal point |
+| `gpt-5.6-sol` / `xhigh` | 57.65 | 0.682 | frontier |
+| `gpt-5.6-sol` / `high` | 55.87 | 0.453 | frontier — best high-end value; unassessable-floor default |
+| `gpt-5.6-terra` / `max` | 54.95 | 0.554 | dominated by sol/high (smarter and cheaper) — never select |
+| `gpt-5.6-sol` / `medium` | 53.59 | 0.314 | frontier |
+| `gpt-5.6-terra` / `xhigh` | 51.60 | 0.327 | dominated by sol/medium — never select |
+| `gpt-5.6-luna` / `max` | 51.24 | 0.209 | frontier |
+| `gpt-5.6-sol` / `low` | 49.44 | 0.197 | avoid — luna/max gives +1.8 points for +$0.012 |
+| `gpt-5.6-luna` / `xhigh` | 49.07 | 0.139 | frontier — strong value |
+| `gpt-5.6-terra` / `high` | 48.95 | 0.236 | dominated by luna/xhigh (equal intelligence, 1.7x price) — never select |
+| `gpt-5.6-luna` / `high` | 46.06 | 0.095 | frontier — best quality/price knee |
+| `gpt-5.6-terra` / `medium` | 45.57 | 0.128 | dominated by luna/high — never select |
+| `gpt-5.6-terra` / `low` | 40.47 | 0.101 | dominated by luna/high (same price, +5.6 points) — never select |
+| `gpt-5.6-luna` / `medium` | 38.05 | 0.050 | frontier |
+| `gpt-5.6-luna` / `low` | 33.26 | 0.040 | frontier — cheapest |
+
+**Efficient ladder** — the only selectable rungs; every Terra pair and sol/low is beaten on both axes (or within noise for >40% more cost) by a rung here:
+
+`luna/low` -> `luna/medium` -> `luna/high` -> `luna/xhigh` -> `luna/max` -> `sol/medium` -> `sol/high` -> `sol/xhigh` -> `sol/max`
+
+The marginal cost per intelligence point roughly doubles at each rung ($0.002 -> 0.006 -> 0.015 -> 0.032 -> 0.045 -> 0.061 -> 0.13 -> 0.29): climbing through Luna is cheap; each Sol rung must be bought by a concrete named risk, and sol/max only when the last point genuinely changes the outcome.
 
 ### Selection Method
 
@@ -440,8 +451,8 @@ Treat the intelligence number as a capability floor, not a target to maximize:
 
 1. Assess the work unit on scope/coupling, ambiguity/novelty, correctness/blast-radius risk, and verification difficulty.
 2. Take the highest load-bearing demand. Scores are ordinal, not additive: do not average dimensions. Move up when several difficult dimensions interact or when a failure would be hard to detect or reverse.
-3. Choose the lowest-intelligence approved pair that safely clears that demand. This is the efficient choice: never buy excess capability without a task-specific quality reason.
-4. When two pairs have the same intelligence, choose by demonstrated task fit; if fit is indistinguishable, prefer the lower reasoning effort or a known lower operational cost. Do not invent price, latency, or model-specialization claims.
+3. Choose the lowest efficient-ladder rung that safely clears that demand. This is the efficient choice: never a dominated pair, never excess capability without a task-specific quality reason.
+4. Cost is real data: at a comparable floor take the cheaper rung. Do not invent latency or model-specialization claims.
 5. Record the pair, intelligence score, concise evidence-based rationale, and concrete escalation triggers. Avoid generic rationales such as "complex task."
 
 Use these calibration anchors; select between anchors when the evidence warrants it:
@@ -450,10 +461,10 @@ Use these calibration anchors; select between anchors when the evidence warrants
 - **38-40:** bounded local work with small judgment calls, established patterns, and easy-to-observe failures.
 - **46:** moderate multi-symbol or multi-file work with known architecture, meaningful edge cases, or routine integration reasoning.
 - **49:** complex cross-component behavior, shared contracts, difficult state/error/UI/data reasoning, or substantial verification.
-- **51-52:** very complex or high-risk work with several interacting constraints, broad impact, security/migration/concurrency/public-contract concerns, or incomplete but resolvable evidence.
-- **55:** exceptional ambiguity, novelty, blast radius, conflicting evidence, or a critical cross-system verdict where the required floor cannot be assessed confidently.
+- **51-54:** very complex or high-risk work with several interacting constraints, broad impact, security/migration/concurrency/public-contract concerns, or incomplete but resolvable evidence.
+- **56-59:** exceptional ambiguity, novelty, blast radius, conflicting evidence, or a critical cross-system verdict; reserve the top rungs for stakes that justify their marginal cost.
 
-Size every work unit independently; never inherit a model merely because the preceding agent used it. A narrow implementation can still need a stronger reviewer when the verdict must integrate several tasks or protect security, data, migrations, concurrency, public contracts, or critical UX. Luna is eligible at every listed effort level; do not treat it as simple-task-only. If the capability floor or task fit cannot be assessed confidently, use `gpt-5.6-terra` with `max` reasoning. For non-planner specialists, do not select an unranked pair such as Terra `ultra` unless the user supplies a new approved scale.
+Size every work unit independently; never inherit a model merely because the preceding agent used it. A narrow implementation can still need a stronger reviewer when the verdict must integrate several tasks or protect security, data, migrations, concurrency, public contracts, or critical UX. Luna is eligible at every listed effort level; do not treat it as simple-task-only. If the capability floor or task fit cannot be assessed confidently, use `gpt-5.6-sol` with `high` reasoning; escalate to `xhigh`/`max` only when the verdict itself is critical. The planner keeps its fixed `sol`/`xhigh` profile; Sol is not otherwise exclusive. For non-planner specialists, do not select an unranked pair such as Terra `ultra` unless the user supplies a new approved scale.
 
 ## Memory Policy
 
