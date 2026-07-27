@@ -516,17 +516,15 @@ switch ($PSCmdlet.ParameterSetName) {
 }
 
 $approvedPairs = @(
-    'gpt-5.6-sol/xhigh',
-    'gpt-5.6-terra/max',
-    'gpt-5.6-luna/max',
-    'gpt-5.6-terra/xhigh',
-    'gpt-5.6-luna/xhigh',
-    'gpt-5.6-terra/high',
-    'gpt-5.6-luna/high',
-    'gpt-5.6-terra/medium',
+    'gpt-5.6-luna/low',
     'gpt-5.6-luna/medium',
-    'gpt-5.6-terra/low',
-    'gpt-5.6-luna/low'
+    'gpt-5.6-luna/high',
+    'gpt-5.6-luna/xhigh',
+    'gpt-5.6-luna/max',
+    'gpt-5.6-sol/medium',
+    'gpt-5.6-sol/high',
+    'gpt-5.6-sol/xhigh',
+    'gpt-5.6-sol/max'
 )
 $pair = "$Model/$ReasoningEffort"
 if ($pair -notin $approvedPairs) {
@@ -534,9 +532,6 @@ if ($pair -notin $approvedPairs) {
 }
 if ($Agent -eq 'implementation-planner' -and $pair -ne 'gpt-5.6-sol/xhigh') {
     throw 'implementation-planner must use gpt-5.6-sol/xhigh'
-}
-if ($Agent -ne 'implementation-planner' -and $Model -eq 'gpt-5.6-sol') {
-    throw 'gpt-5.6-sol is reserved for implementation-planner'
 }
 
 $agentsDir = Join-Path $codexHome 'agents'

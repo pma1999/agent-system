@@ -1,0 +1,7 @@
+# GENERATED: protocol=2.1.0 source_sha256=23388e1cde7d1ee06fa89ea360d39bacaff33753e14cdc39893e1449b07bdda1; edit ~/.agentic/orchestrator and run sync_runtime.py.
+interface:
+  display_name: "Engineering Orchestrator"
+  short_description: "Efficient, evidence-led multi-agent engineering"
+  default_prompt: "Use $orchestrator to choose the lightest safe engineering workflow and complete this change."
+policy:
+  allow_implicit_invocation: true

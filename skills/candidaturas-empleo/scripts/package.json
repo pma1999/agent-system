@@ -1,0 +1,14 @@
+{
+  "name": "cv-engine-pablo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Motor de CV y carta de presentación de Pablo Miguel Argudo (data-driven, docx).",
+  "main": "build_cv.js",
+  "scripts": {
+    "cv": "node build_cv.js cv_data.example.js",
+    "letter": "node build_cv.js letter_data.example.js"
+  },
+  "dependencies": {
+    "docx": "^9.7.1"
+  }
+}
