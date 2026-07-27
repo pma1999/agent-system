@@ -77,6 +77,8 @@ Each artifact has one job. Do not let artifacts become competing summaries:
 - `codex-review-<id|final>.md` / `codex-diagnosis-<id>.md`: Codex verbatim second opinion, transcribed by the orchestrator; never a verdict.
 - `progress.md`: coordination ledger only — compact planning provenance (engine, explicit model/effort, fallback), baseline SHA, per-task status/implementer/owner/paths, running implementation-engine tally, changed files/symbols, test summary, review status. Planning provenance never changes implementer routing. No long prose.
 
+**Artifact basename rule:** never name an artifact so its filename *starts* with `report`, `summary`, `findings`, or `analysis` before `.md` (case-insensitive) — Claude Code blocks subagent writes to those paths and the agent loses its report. Prefix with the artifact kind (`task-report.md`, `task-<id>-report.md`); the names above already comply, so keep the prefix when inventing a Report Path.
+
 If a fact changes, update the owner artifact first, then update downstream briefs/reports only where the exact fact is load-bearing. Agent final messages stay minimal: status, artifact path, verification summary, changed/found items, needs.
 
 ## Retrieval (orchestrator deltas)
@@ -159,7 +161,7 @@ For one cohesive change whose scope is bounded and knowable without a plan bundl
 
 Mechanics:
 
-1. Create `plans/quick-<slug>/brief.md` using the standard task-brief schema (Agent Boundary, Goal, Acceptance Criteria, Scope, Constraints, Interfaces, Context Pack, Patterns, Tests, Implementer, Task Review, Named Risks, Report Path -> `plans/quick-<slug>/report.md`). This is a handoff, not a design: capture requirements, pointers, and tests; the implementer owns design within it. Run one focused explorer pass first only if the touch set is not already known.
+1. Create `plans/quick-<slug>/brief.md` using the standard task-brief schema (Agent Boundary, Goal, Acceptance Criteria, Scope, Constraints, Interfaces, Context Pack, Patterns, Tests, Implementer, Task Review, Named Risks, Report Path -> `plans/quick-<slug>/task-report.md`). This is a handoff, not a design: capture requirements, pointers, and tests; the implementer owns design within it. Run one focused explorer pass first only if the touch set is not already known.
 2. Capture the baseline SHA (Dispatch Mechanics), then dispatch one implementer chosen per Implementer Routing's unplanned-task rule.
 3. Verification: the implementer's BDD/TDD evidence plus the orchestrator running the brief's named checks. Task review only per the standard triggers (public/shared contract, security/data/migrations/concurrency/critical UI, `DONE_WITH_CONCERNS`, user request); otherwise skip it.
 4. Track owner/status inline in `plans/quick-<slug>/brief.md` frontmatter or a short `progress.md` in the same folder if more than one dispatch happens.
