@@ -1,11 +1,12 @@
-# Sistema multiagéntico personal (~/.claude + ~/.codex)
+# Sistema multiagéntico personal (~/.claude + ~/.codex + ~/.config/opencode)
 
-Configuración versionada del sistema de orquestación multiagente para **Claude Code** y **Codex CLI**: `CLAUDE.md`/`AGENTS.md`, skill `orchestrator` (+ referencias), 6 agentes especialistas por lado, parches del plugin Codex y plantillas de configuración. **Un único repo privado** con dos ramas:
+Configuración versionada del sistema de orquestación multiagente para **Claude Code**, **Codex CLI** y **OpenCode**: `CLAUDE.md`/`AGENTS.md`, skill `orchestrator`/`opencode-orchestrator` (+ referencias), 6 agentes especialistas por lado, parches del plugin Codex y plantillas de configuración. **Un único repo privado** con tres ramas:
 
 - `github.com/pma1999/agent-system`, rama **`master`** → se instala en `~/.claude` (esta rama; incluye el instalador)
 - misma URL, rama **`codex`** → se instala en `~/.codex`
+- misma URL, rama **`opencode`** → se instala en `~/.config/opencode`
 
-`install.ps1` gestiona **las dos carpetas** a la vez; tú solo tratas con un repo.
+`install.ps1` gestiona **las tres carpetas** a la vez; tú solo tratas con un repo.
 
 ## Instalar en un PC nuevo (cualquier usuario)
 
@@ -16,11 +17,12 @@ git clone https://github.com/pma1999/agent-system.git "$env:TEMP\agent-system"
 pwsh -File "$env:TEMP\agent-system\install.ps1"
 ```
 
-El instalador convierte `~/.claude` y `~/.codex` en clones de los repos (haciendo copia de seguridad en `backup-preinstall-<fecha>/` de cualquier fichero previo que fuera a sobrescribir), fusiona las plantillas de configuración y aplica el parche del plugin si ya existe. Después:
+El instalador convierte `~/.claude`, `~/.codex` y `~/.config/opencode` en clones de los repos (haciendo copia de seguridad en `backup-preinstall-<fecha>/` de cualquier fichero previo que fuera a sobrescribir), fusiona las plantillas de configuración y aplica el parche del plugin si ya existe. Después:
 
 1. Abre `claude` — inicia sesión si hace falta; en el primer arranque instala los plugins de `settings.json`.
 2. Ejecuta `/repatch-codex` dentro de Claude Code (si el instalador dejó el parche pendiente por no existir aún el plugin).
 3. `codex login` si vas a usar el lado Codex.
+4. `opencode` ya queda configurado; si lo usas **dentro de WSL**, enlaza su home a la carpeta de Windows (ver sección OpenCode abajo).
 
 ## Actualizar (en cualquier PC, en cualquier momento)
 
@@ -44,9 +46,29 @@ O `/sync-agent-system push`. Commitea y sube ambas ramas. Si otro PC publicó an
 |---|---|
 | `CLAUDE.md`, `AGENTS.md` | credenciales (`.credentials.json`, `auth.json`), sesiones, historial |
 | `agents/`, `skills/`, `rules/`, `patches/`, `plans/`, `statusline.py` | `settings.json` y `config.toml` reales (estado de máquina: hooks locales, trust de proyectos, runtimes) |
-| `templates/settings.json`, `templates/config.toml` (claves del sistema) | caches de plugins, sqlite, logs, memoria auto de Claude |
+| `templates/settings.json`, `templates/config.toml`, `templates/opencode.jsonc` (claves del sistema) | caches de plugins, sqlite, logs, memoria auto de Claude |
+| rama `opencode`: `AGENTS.md`, `agents/`, `skills/`, `templates/` | `opencode.jsonc`/`opencode.json` reales, `node_modules`, estado de OpenCode |
 
-Las plantillas se fusionan **aditivamente**: añaden las claves del sistema que falten (modelo, permisos codegraph, plugins habilitados, marketplaces, MCP codegraph, multi_agent…) y **jamás** sobrescriben un valor existente. Los ajustes propios de cada máquina (p. ej. hooks extra en `settings.json`, trust de proyectos en `config.toml`) sobreviven a cada update.
+Las plantillas se fusionan **aditivamente**: añaden las claves del sistema que falten (modelo, permisos codegraph, plugins habilitados, marketplaces, MCP codegraph, multi_agent…) y **jamás** sobrescriben un valor existente. Los ajustes propios de cada máquina (p. ej. hooks extra en `settings.json`, trust de proyectos en `config.toml`, modelo por defecto en `opencode.jsonc`) sobreviven a cada update.
+
+## OpenCode (`~/.config/opencode`, rama `opencode`)
+
+Port nativo del sistema al runtime de OpenCode, sin dependencias de Claude Code ni del CLI Codex:
+
+- **`AGENTS.md` global** — orquestador obligatorio, barra frontend, doctrina de retrieval (glob/grep/codegraph) y Context7 CLI. Tiene prioridad sobre `~/.claude/CLAUDE.md` por diseño de OpenCode.
+- **6 especialistas** en `agents/` como subagentes (`mode: subagent`, `task` deshabilitada): `implementation-planner`, `integration-researcher` y `root-cause-debugger` usan `opencode-go/glm-5.2` con `reasoningEffort: max`; `codebase-explorer`, `task-implementer-bdd` e `implementation-reviewer` usan `opencode-go/deepseek-v4-flash` con `reasoningEffort: max`.
+- **Skill `opencode-orchestrator`** — mismo contrato de artefactos (`plans/<slug>/`, briefs, reports, reviews, `progress.md`), carriles Direct/Quick/Plan/Debug, gates y fix loop. Dispatch con la herramienta `task` y reanudación de owners por `task_id` (equivalente a `SendMessage`). **Motor único**: sin delegación Codex ni enrutado 50/50 (el canal `codex:codex-rescue` es un plugin de Claude Code); las second opinions son instancias frescas independientes del mismo especialista, con los mismos criterios y caps que en Codex. El nombre es distinto de `orchestrator` a propósito: OpenCode descubre también `~/.claude/skills/` y exige nombres de skill únicos.
+- **`templates/opencode.jsonc`** — MCP `codegraph` (merge aditivo; JSON puro sin comentarios para que PowerShell lo parsee).
+
+En **WSL**, OpenCode lee `~/.config/opencode` del home de Linux. Puente:
+
+```bash
+# una sola vez por máquina WSL (haz backup antes si existe)
+mv ~/.config/opencode ~/.config/opencode.backup-$(date +%Y%m%d) 2>/dev/null
+ln -s /mnt/c/Users/<usuario-windows>/.config/opencode ~/.config/opencode
+```
+
+Y el sync desde WSL se lanza con el PowerShell de Windows: `pwsh.exe -NoProfile -File 'C:\Users\<usuario-windows>\.claude\install.ps1'`.
 
 ## Problemas típicos
 
