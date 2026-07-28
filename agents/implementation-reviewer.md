@@ -6,7 +6,7 @@ reasoningEffort: max
 color: "#a855f7"
 tools:
   task: false
-  edit: false
+  edit: true
   "playwright_*": true
 ---
 

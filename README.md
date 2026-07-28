@@ -5,7 +5,7 @@ Checkout en `~/.config/opencode`. Documentación completa del sistema (instalaci
 ## Contenido
 
 - `AGENTS.md` — reglas globales de OpenCode: orquestador obligatorio, barra frontend, doctrina de retrieval (glob/grep/codegraph), Context7 CLI.
-- `agents/` — los 6 especialistas (subagentes OpenCode, herramienta `task` deshabilitada en todos):
+- `agents/` — los 6 especialistas (subagentes OpenCode, `task` deshabilitada y `edit` habilitada explícitamente en todos: OpenCode usa el permiso `edit` también para la herramienta `write`, necesaria para mapas/recetas/planes/diagnósticos/reports/reviews; los prompts de roles no-productivos limitan esa escritura a sus artifacts):
   - `implementation-planner` → `openai/gpt-5.6-sol` con `reasoningEffort: xhigh`
   - `integration-researcher`, `root-cause-debugger`, `implementation-reviewer` → `openai/gpt-5.6-luna` con `reasoningEffort: max`
   - `codebase-explorer`, `task-implementer-bdd` → `opencode-go/deepseek-v4-flash` con `reasoningEffort: max`
