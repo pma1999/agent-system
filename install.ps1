@@ -311,6 +311,34 @@ function Merge-OpenCodeConfig {
         return
     }
     $changed = $false
+
+    # Command arrays are positional, not sets. Preserve user-custom commands, but
+    # migrate the one legacy Playwright command shipped by this system.
+    if ($target.Contains('mcp') -and $template.Contains('mcp')) {
+        foreach ($serverName in @($template['mcp'].Keys)) {
+            if (-not $target['mcp'].Contains($serverName)) { continue }
+            $targetServer = $target['mcp'][$serverName]
+            $templateServer = $template['mcp'][$serverName]
+            if ($targetServer -isnot [System.Collections.IDictionary] -or
+                $templateServer -isnot [System.Collections.IDictionary] -or
+                -not $targetServer.Contains('command') -or
+                -not $templateServer.Contains('command')) { continue }
+
+            $currentCommand = @($targetServer['command'])
+            $legacyPlaywright = @('npx', '-y', '@playwright/mcp')
+            if ($serverName -eq 'playwright' -and
+                ($currentCommand -join "`0") -eq ($legacyPlaywright -join "`0")) {
+                $targetServer['command'] = @($templateServer['command'])
+                $changed = $true
+                Write-Info "comando Playwright MCP actualizado a headless Chromium"
+            }
+            else {
+                # Existing non-legacy command is machine/user configuration and wins.
+                $templateServer.Remove('command')
+            }
+        }
+    }
+
     Merge-Hashtable -Target $target -Template $template -Changed ([ref]$changed)
     if ($changed) {
         $json = $target | ConvertTo-Json -Depth 30
@@ -357,5 +385,5 @@ else {
     Write-Host "  1. claude  (inicia sesión si hace falta; instala plugins en el primer arranque)"
     Write-Host "  2. /repatch-codex dentro de Claude Code si el paso del parche quedó pendiente"
     Write-Host "  3. codex login  (si usarás el lado Codex)"
-    Write-Host "  4. opencode: la config ya queda en ~/.config/opencode; en WSL enlázala (ver README, sección OpenCode)"
+    Write-Host "  4. opencode: la config ya queda en ~/.config/opencode; en WSL enlaza config + ~/.claude/skills (ver README)"
 }

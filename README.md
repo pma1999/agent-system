@@ -56,17 +56,23 @@ Las plantillas se fusionan **aditivamente**: añaden las claves del sistema que 
 Port nativo del sistema al runtime de OpenCode, sin dependencias de Claude Code ni del CLI Codex:
 
 - **`AGENTS.md` global** — orquestador obligatorio, barra frontend, doctrina de retrieval (glob/grep/codegraph) y Context7 CLI. Tiene prioridad sobre `~/.claude/CLAUDE.md` por diseño de OpenCode.
-- **6 especialistas** en `agents/` como subagentes (`mode: subagent`, `task` deshabilitada): `implementation-planner`, `integration-researcher` y `root-cause-debugger` usan `opencode-go/glm-5.2` con `reasoningEffort: max`; `codebase-explorer`, `task-implementer-bdd` e `implementation-reviewer` usan `opencode-go/deepseek-v4-flash` con `reasoningEffort: max`.
-- **Skill `opencode-orchestrator`** — mismo contrato de artefactos (`plans/<slug>/`, briefs, reports, reviews, `progress.md`), carriles Direct/Quick/Plan/Debug, gates y fix loop. Dispatch con la herramienta `task` y reanudación de owners por `task_id` (equivalente a `SendMessage`). **Motor único**: sin delegación Codex ni enrutado 50/50 (el canal `codex:codex-rescue` es un plugin de Claude Code). Única second opinion conservada: la **segunda diagnosis** (ante `BLOCKED` o confianza < alta, una instancia fresca e independiente del mismo debugger, cap 1 por bug); sin revisión adversaria — con el mismo modelo que el revisor original aporta poco para lo que cuesta. El nombre es distinto de `orchestrator` a propósito: OpenCode descubre también `~/.claude/skills/` y exige nombres de skill únicos.
-- **`templates/opencode.jsonc`** — MCP `codegraph` (merge aditivo; JSON puro sin comentarios para que PowerShell lo parsee).
+- **6 especialistas** en `agents/` como subagentes (`mode: subagent`, `task` deshabilitada): `implementation-planner` usa `openai/gpt-5.6-sol` con `reasoningEffort: xhigh`; `integration-researcher`, `root-cause-debugger` e `implementation-reviewer` usan `openai/gpt-5.6-luna` con `reasoningEffort: max`; `codebase-explorer` y `task-implementer-bdd` usan `opencode-go/deepseek-v4-flash` con `reasoningEffort: max`.
+- **Skill `opencode-orchestrator`** — mismo contrato de artefactos (`plans/<slug>/`, briefs, reports, reviews, `progress.md`), carriles Direct/Quick/Plan/Debug, gates y fix loop. Dispatch con la herramienta `task` y reanudación de owners por `task_id` (equivalente a `SendMessage`). **Motor único**: sin delegación Codex ni enrutado 50/50 (el canal `codex:codex-rescue` es un plugin de Claude Code). Única second opinion conservada: la **segunda diagnosis** (ante `BLOCKED` o confianza < alta, una instancia fresca e independiente del mismo debugger, cap 1 por bug); sin revisión adversaria. La skill Claude `orchestrator` queda oculta y denegada por `permission.skill`; solo `opencode-orchestrator` se anuncia al agente.
+- **`templates/opencode.jsonc`** — MCP `codegraph` global y MCP `playwright` headless habilitado solo para implementer/reviewer/researcher/debugger (merge aditivo; JSON puro sin comentarios para que PowerShell lo parsee).
 
-En **WSL**, OpenCode lee `~/.config/opencode` del home de Linux. Puente:
+En **WSL**, OpenCode lee configuración y skills externas desde el home de Linux. Puentes de una sola vez:
 
 ```bash
 # una sola vez por máquina WSL (haz backup antes si existe)
 mv ~/.config/opencode ~/.config/opencode.backup-$(date +%Y%m%d) 2>/dev/null
 ln -s /mnt/c/Users/<usuario-windows>/.config/opencode ~/.config/opencode
+mkdir -p ~/.claude
+ln -s /mnt/c/Users/<usuario-windows>/.claude/skills ~/.claude/skills
+npx -y @playwright/mcp@latest install-browser chromium
+sudo npx -y playwright@latest install-deps chrome-for-testing
 ```
+
+El enlace de skills expone globalmente en cualquier proyecto WSL `sync-agent-system`, `frontend`, `frontend-one`, `find-docs` y las demás skills sincronizadas, sin copiarlas. `permission.skill` deniega la skill Claude `orchestrator`, evitando que se anuncie o invoque en OpenCode. Los dos últimos comandos preparan Chromium headless y sus dependencias Linux una sola vez por distro WSL.
 
 Y el sync desde WSL se lanza con el PowerShell de Windows: `pwsh.exe -NoProfile -File 'C:\Users\<usuario-windows>\.claude\install.ps1'`.
 

@@ -34,6 +34,18 @@ pwsh.exe -NoProfile -File 'C:\Users\PcVIP\.claude\install.ps1'
 pwsh.exe -NoProfile -File 'C:\Users\PcVIP\.claude\install.ps1' -Push -Message "<short summary>"
 ```
 
+On a new WSL installation, bridge both OpenCode config and the synchronized Claude-compatible skills once (back up a pre-existing target before replacing it):
+
+```bash
+ln -s /mnt/c/Users/PcVIP/.config/opencode ~/.config/opencode
+mkdir -p ~/.claude
+ln -s /mnt/c/Users/PcVIP/.claude/skills ~/.claude/skills
+npx -y @playwright/mcp@latest install-browser chromium
+sudo npx -y playwright@latest install-deps chrome-for-testing
+```
+
+The skills link makes `sync-agent-system`, frontend skills, docs skills and the rest of `~/.claude/skills` globally visible to OpenCode from any WSL project. OpenCode config denies the Claude `orchestrator` skill and explicitly allows `opencode-orchestrator`, so the wrong runtime skill is neither advertised nor invocable. Do not copy the skills into the OpenCode branch. The final two commands install the browser and Linux dependencies once per WSL distro; `sudo` may require the user's password.
+
 ## Handling script output
 
 - Report per-repo results plainly (updated X→Y / already up to date / committed+pushed / no changes).
