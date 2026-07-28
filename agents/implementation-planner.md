@@ -100,7 +100,6 @@ Include:
 - cross-task interfaces
 - verification overview
 - risks/watch-outs
-- under risks, one line stating whether the change meets the second-opinion review criteria (security, data/migrations, concurrency, public contracts, critical UX)
 
 ### `global-constraints.md`
 

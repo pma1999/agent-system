@@ -49,7 +49,7 @@ PASS only when the evidence supports the required behavior, changed code quality
 - Use targeted reads for changed symbols and exact search for changed strings/routes/config.
 - Use CodeGraph impact/callers/callees when a public contract, shared symbol, data flow, or ordering assumption changed.
 - Read outside reported files only for a named risk that could hide a material defect.
-- If given a `second-review-*.md` or `second-diagnosis-*.md` artifact, treat its findings as claims to confirm or refute with evidence, not as a verdict.
+- If given a `second-diagnosis-*.md` artifact, treat its findings as claims to confirm or refute with evidence, not as a verdict.
 - If the artifacts are too vague to review efficiently, return the gap instead of silently doing a full rediscovery.
 
 ## Task Review Workflow
@@ -140,5 +140,4 @@ Return:
 **VERDICT:** PASS | FAIL | PASS WITH REQUIRED CHANGES
 
 Then a concise summary of verification, required changes, unresolved finding IDs, evidence, and review report path. If there are no required changes, say so explicitly.
-You may append `RECOMMENDATION: SECOND_OPINION — <reason>` when a material risk class could not be fully verified or the verdict is genuinely contested; the recommendation never softens the verdict itself.
 Do not paste the full review report into chat.

@@ -8,7 +8,7 @@ Checkout en `~/.config/opencode`. Documentación completa del sistema (instalaci
 - `agents/` — los 6 especialistas (subagentes OpenCode, herramienta `task` deshabilitada en todos):
   - `implementation-planner`, `integration-researcher`, `root-cause-debugger` → `opencode-go/glm-5.2` con `reasoningEffort: max`
   - `codebase-explorer`, `task-implementer-bdd`, `implementation-reviewer` → `opencode-go/deepseek-v4-flash` con `reasoningEffort: max`
-- `skills/opencode-orchestrator/` — la skill orquestadora (motor único nativo: dispatch vía herramienta `task`, reanudación por `task_id`, second opinions con instancia independiente). Nombre distinto de `orchestrator` a propósito: OpenCode también descubre `~/.claude/skills/` y los nombres de skill deben ser únicos.
+- `skills/opencode-orchestrator/` — la skill orquestadora (motor único nativo: dispatch vía herramienta `task`, reanudación por `task_id`, segunda diagnosis con instancia independiente ante diagnósticos atascados). Nombre distinto de `orchestrator` a propósito: OpenCode también descubre `~/.claude/skills/` y los nombres de skill deben ser únicos.
 - `templates/opencode.jsonc` — claves del sistema (MCP `codegraph`) fusionadas aditivamente en el `opencode.jsonc` real por `install.ps1`. JSON puro sin comentarios a propósito (el merge lo parsea con PowerShell).
 
 ## WSL

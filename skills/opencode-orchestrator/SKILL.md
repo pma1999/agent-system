@@ -1,7 +1,7 @@
 ---
 name: opencode-orchestrator
 description: >-
-  Use this skill for essentially any software-engineering work: implementing a feature, making a non-trivial or multi-file change, fixing a user-reported bug, refactoring, adding an endpoint or UI component, or turning a rough idea into a plan. It makes OpenCode act as an orchestrator: triage the request into the right lane (Quick for one cohesive bounded change; the full Plan, Implement, Review pipeline for larger work), delegate discovery to codebase-explorer, have implementation-planner author a plan bundle with task briefs, dispatch task-implementer-bdd implementers from those briefs, run implementation-reviewer gates from task reports and diffs, and use capped native second-opinion gates for high-risk verdicts and stalled diagnoses. Do not use it for quick factual or conceptual questions, library/API documentation lookups, or explanations of existing code that need no changes.
+  Use this skill for essentially any software-engineering work: implementing a feature, making a non-trivial or multi-file change, fixing a user-reported bug, refactoring, adding an endpoint or UI component, or turning a rough idea into a plan. It makes OpenCode act as an orchestrator: triage the request into the right lane (Quick for one cohesive bounded change; the full Plan, Implement, Review pipeline for larger work), delegate discovery to codebase-explorer, have implementation-planner author a plan bundle with task briefs, dispatch task-implementer-bdd implementers from those briefs, run implementation-reviewer gates from task reports and diffs, and use a capped second-diagnosis gate for stalled diagnoses. Do not use it for quick factual or conceptual questions, library/API documentation lookups, or explanations of existing code that need no changes.
 ---
 
 # Operating Model
@@ -46,7 +46,6 @@ plans/<slug>/
   task-<id>-report.md
   task-<id>-review.md
   final-review.md
-  second-review-final.md
   debug-diagnosis.md
   second-diagnosis-<id>.md
   progress.md
@@ -75,9 +74,8 @@ Each artifact has one job. Do not let artifacts become competing summaries:
 - `task-<id>-report.md`: actual implementation delta — changed files/symbols, tests, read ledger, decisions, concerns, append-only remediation rounds.
 - `task-<id>-review.md`: verdict and evidence with stable finding IDs, for a task review only when task review is truly needed.
 - `final-review.md`: integrated verdict and evidence for the completed work — stable finding IDs and append-only re-review rounds. Written by the final reviewer, always.
-- `second-review-final.md`: verbatim-preserved independent second review (see Second Opinions) — findings and evidence only, never the verdict owner.
 - `debug-diagnosis.md`: root-cause evidence and fix direction when a diagnosis is complex or will feed planning.
-- `second-diagnosis-<id>.md`: verbatim-preserved independent second diagnosis consuming the first debugger's Hypotheses Handoff (see Second Opinions).
+- `second-diagnosis-<id>.md`: verbatim-preserved independent second diagnosis consuming the first debugger's Hypotheses Handoff (see Second Diagnosis).
 - `progress.md`: coordination ledger only — planning provenance, baseline SHA, per-task status/implementer/owner `task_id`/paths, changed files/symbols, test summary, review status. No long prose.
 
 **Artifact basename rule:** never name an artifact so its filename *starts* with `report`, `summary`, `findings`, or `analysis` before `.md` (case-insensitive) — some agent runtimes block subagent writes to those paths and the agent loses its report, so this system keeps the rule across all runtimes. Prefix with the artifact kind (`task-report.md`, `task-<id>-report.md`); the names above already comply, so keep the prefix when inventing a Report Path.
@@ -230,8 +228,6 @@ After all tasks are complete, dispatch `implementation-reviewer` in `final` mode
 
 Final review checks integration across tasks, runs relevant broader tests/Playwright where applicable, and uses `codegraph_impact` for changed public contracts. It is broader than task review but still starts from artifacts and diff, not from scratch.
 
-After the final verdict, check the Adversarial Second Review criteria in Second Opinions and dispatch it when they are met.
-
 ### 7. Fix Loop
 
 For required changes, work from the review's stable finding IDs (`RC-01`, ...):
@@ -241,19 +237,11 @@ For required changes, work from the review's stable finding IDs (`RC-01`, ...):
 3. After the fix, resume the recorded reviewer's `task_id`: "Re-review round <n>. Read the updated <report> and remediation diff. Re-check RC-01 and RC-03 only, update the same review file, return the current verdict plus unresolved IDs."
 4. **Cross-task or changed-contract findings**: have the planner amend or create scoped fix briefs (or write a Quick-style fix brief yourself when no plan covers the area), dispatch a fresh `task-implementer-bdd`, and review per the task-review criteria.
 5. Stale or unrecoverable owners (new session, failed resume): dispatch a replacement from brief + report + review + diff and record the ownership change in `progress.md`.
-6. Prefer one owner per cohesive fix batch. Cap repeated loops at 2-3 rounds before escalating to the user. Second-opinion findings enter as ordinary required changes under the same shared cap.
+6. Prefer one owner per cohesive fix batch. Cap repeated loops at 2-3 rounds before escalating to the user.
 
-## Second Opinions
+## Second Diagnosis
 
-Both paths below are orchestrator-dispatched, capped, read-only passes whose output is preserved verbatim as bundle artifacts. Confirmed findings enter the normal fix loop under the shared 2-3 round cap; a second opinion never buys extra rounds. The second pass is always a **fresh, independent dispatch** of the same specialist role — never the recorded owner's resumed session — so it reads the artifacts without the first pass's anchoring.
-
-### Adversarial Second Review
-
-After a final-review verdict, check: security, data/migrations, concurrency, public contracts, or critical UX in scope; a contested or limitation-laden verdict; a reviewer `RECOMMENDATION: SECOND_OPINION`; or an explicit user request. If met (cap: one per final-review round), dispatch a second, independent `implementation-reviewer` — never the recorded final reviewer — read-only, with the plan, constraints, baseline SHA, and the final review path, mandated to confirm or refute the existing findings and hunt real additional defects only (no restyling, no invented requirements). It writes `plans/<slug>/second-review-final.md`.
-
-Reconcile: the recorded final reviewer owns the verdict; the second review is evidence, never a verdict. Never drop a second-opinion finding silently. Evidence-confirmed findings enter the fix loop as ordinary required changes; a contested material finding triggers a targeted re-check by the recorded final reviewer ("confirm or refute finding X with evidence"); a still-contested material risk (security/data) is surfaced to the user with both positions.
-
-### Second Diagnosis
+A capped, read-only, orchestrator-dispatched second pass whose output is preserved verbatim as a bundle artifact. The second pass is always a **fresh, independent dispatch** of `root-cause-debugger` — never the recorded owner's resumed session — so it reads the evidence without the first pass's anchoring.
 
 When `root-cause-debugger` returns `BLOCKED` or Confidence below high, automatically dispatch a second, independent `root-cause-debugger` (cap: one per bug), read-only, with the symptoms/repro and the first debugger's Hypotheses Handoff framed strictly as hypotheses and partial evidence to confirm, refute, or replace. It writes its structured diagnosis to `plans/<slug>/second-diagnosis-<id>.md`.
 
@@ -262,7 +250,7 @@ Reconcile before choosing the fix path: agreement -> proceed on the confirmed di
 ## Lane: Debug -> Implement / Plan
 
 1. Dispatch `root-cause-debugger` with symptoms, repro, logs, and any failing command. Provide observed facts and hypotheses only as hypotheses; do not pre-diagnose the root cause for the debugger. Provide `plans/<slug>/debug-diagnosis.md` only when the diagnosis is complex, broad, or will feed a plan; localized fixes may use the debugger's structured response directly.
-2. If the debugger returns `BLOCKED` or Confidence below high, run the Second Diagnosis path in Second Opinions and reconcile before choosing the fix path.
+2. If the debugger returns `BLOCKED` or Confidence below high, run Second Diagnosis and reconcile before choosing the fix path.
 3. If localized, run the Quick lane: the brief carries the debugger's Root Cause, Location, Mechanism, and Fix Direction. A genuinely trivial fix may instead switch explicitly to the Direct lane.
 4. If broad, run the Plan lane.
 5. If an external contract changed, run `integration-researcher` before planning or fixing.
@@ -298,7 +286,7 @@ Each specialist's model and effort are pinned in its agent file — do not resta
 | `implementation-planner`, `integration-researcher`, `root-cause-debugger` | `opencode-go/glm-5.2` / effort `max` |
 | `codebase-explorer`, `task-implementer-bdd`, `implementation-reviewer` | `opencode-go/deepseek-v4-flash` / effort `max` |
 
-The only per-dispatch override is an explicit user pin of a different model for a specific dispatch. Second-opinion dispatches reuse the role's pinned profile; their independence comes from the fresh session, not from a different model.
+The only per-dispatch override is an explicit user pin of a different model for a specific dispatch. The second-diagnosis dispatch reuses the debugger's pinned profile; its independence comes from the fresh session, not from a different model.
 
 ## Memory Policy
 
