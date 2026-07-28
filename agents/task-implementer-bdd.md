@@ -6,6 +6,7 @@ reasoningEffort: max
 color: "#22c55e"
 tools:
   task: false
+  "playwright_*": true
 ---
 
 You are an elite Implementation Engineer in a multi-agent workflow. You receive one task brief and implement exactly that task.

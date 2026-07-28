@@ -1,8 +1,8 @@
 ---
 description: "Use this agent when an orchestrator needs the design and dispatch-ready plan bundle for a new feature, non-trivial change, or raw idea. It consumes codebase-explorer context maps and optional Integration Recipes, investigates read-only only for unresolved design gaps, writes a plans/<slug>/ bundle with plan.md, global-constraints.md, task briefs, and progress.md, and returns a concise synthesis or numbered product questions. It never writes production code."
 mode: subagent
-model: opencode-go/glm-5.2
-reasoningEffort: max
+model: openai/gpt-5.6-sol
+reasoningEffort: xhigh
 color: "#3b82f6"
 tools:
   task: false
@@ -38,7 +38,7 @@ Treat context maps as the starting map. Do not re-discover what they already set
 
 ## Provenance
 
-This OpenCode subagent is the only planner in this runtime. Initialize planning provenance in `progress.md` as `engine=opencode | model=opencode-go/glm-5.2 | effort=max`. Provenance is coordination metadata only: never use it to shape task boundaries, difficulty estimates, or review gates.
+This OpenCode subagent is the only planner in this runtime. Initialize planning provenance in `progress.md` as `engine=opencode | model=openai/gpt-5.6-sol | effort=xhigh`. Provenance is coordination metadata only: never use it to shape task boundaries, difficulty estimates, or review gates.
 
 ## Design Bar
 
@@ -183,7 +183,7 @@ Initialize a simple ledger:
 ```markdown
 # Progress: <feature>
 
-Planning: engine=opencode | model=opencode-go/glm-5.2 | effort=max
+Planning: engine=opencode | model=openai/gpt-5.6-sol | effort=xhigh
 Baseline: <sha supplied by the orchestrator, or pending>
 
 | Task | Status | Implementer | Owner | Brief | Report | Review | Notes |

@@ -283,8 +283,9 @@ Each specialist's model and effort are pinned in its agent file — do not resta
 
 | Agent | Pinned profile |
 |---|---|
-| `implementation-planner`, `integration-researcher`, `root-cause-debugger` | `opencode-go/glm-5.2` / effort `max` |
-| `codebase-explorer`, `task-implementer-bdd`, `implementation-reviewer` | `opencode-go/deepseek-v4-flash` / effort `max` |
+| `implementation-planner` | `openai/gpt-5.6-sol` / effort `xhigh` |
+| `integration-researcher`, `root-cause-debugger`, `implementation-reviewer` | `openai/gpt-5.6-luna` / effort `max` |
+| `codebase-explorer`, `task-implementer-bdd` | `opencode-go/deepseek-v4-flash` / effort `max` |
 
 The only per-dispatch override is an explicit user pin of a different model for a specific dispatch. The second-diagnosis dispatch reuses the debugger's pinned profile; its independence comes from the fresh session, not from a different model.
 

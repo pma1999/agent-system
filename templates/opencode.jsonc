@@ -5,6 +5,22 @@
       "type": "local",
       "command": ["codegraph", "serve", "--mcp"],
       "enabled": true
+    },
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp@latest", "--headless", "--browser", "chromium"],
+      "enabled": true,
+      "timeout": 20000
+    }
+  },
+  "tools": {
+    "playwright_*": false
+  },
+  "permission": {
+    "skill": {
+      "*": "allow",
+      "orchestrator": "deny",
+      "opencode-orchestrator": "allow"
     }
   }
 }
