@@ -44,7 +44,7 @@ npx -y @playwright/mcp@latest install-browser chromium
 sudo npx -y playwright@latest install-deps chrome-for-testing
 ```
 
-The skills link makes `sync-agent-system`, frontend skills, docs skills and the rest of `~/.claude/skills` globally visible to OpenCode from any WSL project. OpenCode config denies the Claude `orchestrator` skill and explicitly allows `opencode-orchestrator`, so the wrong runtime skill is neither advertised nor invocable. Do not copy the skills into the OpenCode branch. The final two commands install the browser and Linux dependencies once per WSL distro; `sudo` may require the user's password.
+The skills link makes `sync-agent-system`, frontend skills, docs skills and the rest of `~/.claude/skills` globally visible to OpenCode from any WSL project. OpenCode config denies the Claude `orchestrator` skill, so the wrong runtime skill is neither advertised nor invocable. Do not copy that runtime-specific skill into the OpenCode branch. The final two commands install the browser and Linux dependencies once per WSL distro; `sudo` may require the user's password.
 
 ## Handling script output
 

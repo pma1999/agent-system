@@ -1,6 +1,6 @@
-# Sistema multiagéntico personal (~/.claude + ~/.codex + ~/.config/opencode)
+# Sistema multiagéntico personal (~/.claude + ~/.codex) + soporte OpenCode
 
-Configuración versionada del sistema de orquestación multiagente para **Claude Code**, **Codex CLI** y **OpenCode**: `CLAUDE.md`/`AGENTS.md`, skill `orchestrator`/`opencode-orchestrator` (+ referencias), 6 agentes especialistas por lado, parches del plugin Codex y plantillas de configuración. **Un único repo privado** con tres ramas:
+Configuración versionada del sistema de orquestación multiagente para **Claude Code** y **Codex CLI**: `CLAUDE.md`/`AGENTS.md`, skill `orchestrator` (+ referencias), agentes especialistas por lado, parches del plugin Codex y plantillas de configuración. La rama OpenCode conserva únicamente soporte compartido (Context7, MCP y skills compatibles), sin orquestador ni agentes personalizados. **Un único repo privado** con tres ramas:
 
 - `github.com/pma1999/agent-system`, rama **`master`** → se instala en `~/.claude` (esta rama; incluye el instalador)
 - misma URL, rama **`codex`** → se instala en `~/.codex`
@@ -38,7 +38,7 @@ O, dentro de Claude Code: `/sync-agent-system`.
 pwsh -File "$HOME/.claude/install.ps1" -Push -Message "descripcion del cambio"
 ```
 
-O `/sync-agent-system push`. Commitea y sube ambas ramas. Si otro PC publicó antes, haz primero un update; si git avisa de divergencia: `git -C $HOME\.claude pull --rebase origin master` (en `.codex`: `... pull --rebase origin codex`).
+O `/sync-agent-system push`. Commitea y sube las tres ramas. Si otro PC publicó antes, haz primero un update; si git avisa de divergencia: `git -C $HOME\.claude pull --rebase origin master` (en `.codex`: `... pull --rebase origin codex`; en `.config/opencode`: `... pull --rebase origin opencode`).
 
 ## Qué se sincroniza y qué no
 
@@ -46,19 +46,19 @@ O `/sync-agent-system push`. Commitea y sube ambas ramas. Si otro PC publicó an
 |---|---|
 | `CLAUDE.md`, `AGENTS.md` | credenciales (`.credentials.json`, `auth.json`), sesiones, historial |
 | `agents/`, `skills/`, `rules/`, `patches/`, `plans/`, `statusline.py` | `settings.json` y `config.toml` reales (estado de máquina: hooks locales, trust de proyectos, runtimes) |
-| `templates/settings.json`, `templates/config.toml`, `templates/opencode.jsonc` (claves del sistema) | caches de plugins, sqlite, logs, memoria auto de Claude |
-| rama `opencode`: `AGENTS.md`, `agents/`, `skills/`, `templates/` | `opencode.jsonc`/`opencode.json` reales, `node_modules`, estado de OpenCode |
+| `templates/settings.json`, `templates/config.toml` (claves del sistema) | caches de plugins, sqlite, logs, memoria auto de Claude |
+| rama `opencode`: `AGENTS.md`, `README.md`, `templates/opencode.jsonc` | `opencode.jsonc`/`opencode.json` reales, `node_modules`, estado de OpenCode |
 
 Las plantillas se fusionan **aditivamente**: añaden las claves del sistema que falten (modelo, permisos codegraph, plugins habilitados, marketplaces, MCP codegraph, multi_agent…) y **jamás** sobrescriben un valor existente. Los ajustes propios de cada máquina (p. ej. hooks extra en `settings.json`, trust de proyectos en `config.toml`, modelo por defecto en `opencode.jsonc`) sobreviven a cada update.
 
 ## OpenCode (`~/.config/opencode`, rama `opencode`)
 
-Port nativo del sistema al runtime de OpenCode, sin dependencias de Claude Code ni del CLI Codex:
+OpenCode utiliza sus agentes integrados; esta rama no contiene un sistema multiagente personalizado:
 
-- **`AGENTS.md` global** — orquestador obligatorio, barra frontend, doctrina de retrieval (glob/grep/codegraph) y Context7 CLI. Tiene prioridad sobre `~/.claude/CLAUDE.md` por diseño de OpenCode.
-- **6 especialistas** en `agents/` como subagentes (`mode: subagent`, `task` deshabilitada, `edit` habilitada explícitamente porque OpenCode controla también `write` con ese permiso): `implementation-planner` usa `openai/gpt-5.6-sol` con `reasoningEffort: xhigh`; `integration-researcher`, `root-cause-debugger` e `implementation-reviewer` usan `openai/gpt-5.6-luna` con `reasoningEffort: max`; `codebase-explorer` y `task-implementer-bdd` usan `opencode-go/deepseek-v4-flash` con `reasoningEffort: max`. Los prompts de explorer/researcher/debugger/reviewer restringen la escritura a sus artifacts, nunca a producción.
-- **Skill `opencode-orchestrator`** — mismo contrato de artefactos (`plans/<slug>/`, briefs, reports, reviews, `progress.md`), carriles Direct/Quick/Plan/Debug, gates y fix loop. Dispatch con la herramienta `task` y reanudación de owners por `task_id` (equivalente a `SendMessage`). **Motor único**: sin delegación Codex ni enrutado 50/50 (el canal `codex:codex-rescue` es un plugin de Claude Code). Única second opinion conservada: la **segunda diagnosis** (ante `BLOCKED` o confianza < alta, una instancia fresca e independiente del mismo debugger, cap 1 por bug); sin revisión adversaria. La skill Claude `orchestrator` queda oculta y denegada por `permission.skill`; solo `opencode-orchestrator` se anuncia al agente.
-- **`templates/opencode.jsonc`** — MCP `codegraph` global y MCP `playwright` headless habilitado solo para implementer/reviewer/researcher/debugger (merge aditivo; JSON puro sin comentarios para que PowerShell lo parsee).
+- **`AGENTS.md` global** — conserva únicamente las reglas de documentación Context7.
+- **Sin agentes ni orquestador personalizados** — no hay routing de modelos, bundles, artefactos ni pipeline personalizado.
+- **Skills compatibles** — el enlace `~/.claude/skills` expone las skills generales sincronizadas; `permission.skill` deniega la skill Claude `orchestrator` para no activar el runtime equivocado.
+- **`templates/opencode.jsonc`** — MCP `codegraph` global y MCP `playwright` headless habilitado para el agente integrado `build` (merge aditivo; JSON puro sin comentarios para que PowerShell lo parsee).
 
 En **WSL**, OpenCode lee configuración y skills externas desde el home de Linux. Puentes de una sola vez:
 
