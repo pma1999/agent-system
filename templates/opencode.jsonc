@@ -16,11 +16,17 @@
   "tools": {
     "playwright_*": false
   },
+  "agent": {
+    "build": {
+      "tools": {
+        "playwright_*": true
+      }
+    }
+  },
   "permission": {
     "skill": {
       "*": "allow",
-      "orchestrator": "deny",
-      "opencode-orchestrator": "allow"
+      "orchestrator": "deny"
     }
   }
 }

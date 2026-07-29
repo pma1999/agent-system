@@ -1,4 +1,4 @@
-# Whitelist strategy: ignore everything, then re-include the agent-system files.
+# Whitelist strategy: ignore everything, then re-include the synchronized support files.
 # Runtime state, caches, credentials, plugin deps, and machine-specific config
 # (opencode.jsonc / opencode.json) must never be committed — the real config is
 # reconstructed per machine by install.ps1 from templates/opencode.jsonc
@@ -8,6 +8,4 @@
 !/.gitattributes
 !/README.md
 !/AGENTS.md
-!/agents/
-!/skills/
 !/templates/
