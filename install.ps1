@@ -18,7 +18,7 @@
     2. Fresh machine: backs up any existing files that the repo would overwrite to
        backup-preinstall-<timestamp>/, then checks out the branch. Existing machine:
        fast-forward pull (refuses politely if you have uncommitted tracked changes).
-    3. Additive config merge — never overwrites existing values:
+    3. Additive config merge — preserves existing values except explicit required migrations:
        - templates/settings.json  -> ~/.claude/settings.json (fill missing keys, union arrays)
        - templates/config.toml    -> ~/.codex/config.toml    (prepend missing top-level keys,
          append missing [tables], insert missing keys into existing tables)
@@ -29,7 +29,7 @@
 
   Machine state is never synced: credentials, sessions, sqlite, logs, plugin caches,
   project trust, hooks you add locally to settings.json, memory, real opencode.json(c)
-  values, opencode plugin deps (node_modules).
+  preferences, opencode plugin deps (node_modules).
 #>
 [CmdletBinding()]
 param(
@@ -312,6 +312,15 @@ function Merge-OpenCodeConfig {
     }
     $changed = $false
 
+    # The optional OpenCode orchestrator needs two delegation levels. Preserve
+    # custom higher values, but migrate older installs that still have depth 1.
+    if ($target.Contains('subagent_depth') -and $template.Contains('subagent_depth') -and
+        [int]$target['subagent_depth'] -lt [int]$template['subagent_depth']) {
+        $target['subagent_depth'] = $template['subagent_depth']
+        $changed = $true
+        Write-Info "subagent_depth actualizado a $($template['subagent_depth']) para el orquestador opcional"
+    }
+
     # Command arrays are positional, not sets. Preserve user-custom commands, but
     # migrate the one legacy Playwright command shipped by this system.
     if ($target.Contains('mcp') -and $template.Contains('mcp')) {
@@ -343,7 +352,7 @@ function Merge-OpenCodeConfig {
     if ($changed) {
         $json = $target | ConvertTo-Json -Depth 30
         [System.IO.File]::WriteAllText($targetPath, $json, [System.Text.UTF8Encoding]::new($false))
-        Write-Info "claves del sistema añadidas (los valores existentes no se tocan)"
+        Write-Info "claves del sistema añadidas y migraciones requeridas aplicadas"
     }
     else {
         Write-Info "sin cambios necesarios"

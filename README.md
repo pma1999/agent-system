@@ -1,6 +1,6 @@
 # Sistema multiagéntico personal (~/.claude + ~/.codex) + soporte OpenCode
 
-Configuración versionada del sistema de orquestación multiagente para **Claude Code** y **Codex CLI**: `CLAUDE.md`/`AGENTS.md`, skill `orchestrator` (+ referencias), agentes especialistas por lado, parches del plugin Codex y plantillas de configuración. La rama OpenCode conserva únicamente soporte compartido (Context7, MCP y skills compatibles), sin orquestador ni agentes personalizados. **Un único repo privado** con tres ramas:
+Configuración versionada del sistema de orquestación multiagente para **Claude Code**, **Codex CLI** y **OpenCode**: `CLAUDE.md`/`AGENTS.md`, skills de orquestación, agentes especialistas por runtime, parches del plugin Codex y plantillas de configuración. En OpenCode, `build` sigue siendo el agente predeterminado y `orquestador` es una ruta opcional para trabajo complejo. **Un único repo privado** con tres ramas:
 
 - `github.com/pma1999/agent-system`, rama **`master`** → se instala en `~/.claude` (esta rama; incluye el instalador)
 - misma URL, rama **`codex`** → se instala en `~/.codex`
@@ -47,18 +47,19 @@ O `/sync-agent-system push`. Commitea y sube las tres ramas. Si otro PC publicó
 | `CLAUDE.md`, `AGENTS.md` | credenciales (`.credentials.json`, `auth.json`), sesiones, historial |
 | `agents/`, `skills/`, `rules/`, `patches/`, `plans/`, `statusline.py` | `settings.json` y `config.toml` reales (estado de máquina: hooks locales, trust de proyectos, runtimes) |
 | `templates/settings.json`, `templates/config.toml` (claves del sistema) | caches de plugins, sqlite, logs, memoria auto de Claude |
-| rama `opencode`: `AGENTS.md`, `README.md`, `templates/opencode.jsonc` | `opencode.jsonc`/`opencode.json` reales, `node_modules`, estado de OpenCode |
+| rama `opencode`: `AGENTS.md`, `README.md`, `agents/`, `prompts/`, `skills/opencode-orchestrator/`, `templates/opencode.jsonc` | `opencode.jsonc`/`opencode.json` reales, `node_modules`, estado de OpenCode |
 
-Las plantillas se fusionan **aditivamente**: añaden las claves del sistema que falten (modelo, permisos codegraph, plugins habilitados, marketplaces, MCP codegraph, multi_agent…) y **jamás** sobrescriben un valor existente. Los ajustes propios de cada máquina (p. ej. hooks extra en `settings.json`, trust de proyectos en `config.toml`, modelo por defecto en `opencode.jsonc`) sobreviven a cada update.
+Las plantillas se fusionan **aditivamente**: añaden las claves del sistema que falten (modelo, permisos codegraph, plugins habilitados, marketplaces, MCP codegraph, multi_agent…) y conservan las preferencias existentes. Solo se actualizan valores concretos cuando una migración obligatoria del sistema lo requiere; por ejemplo, OpenCode eleva `subagent_depth` de `1` a `2` para permitir el orquestador opcional. Los ajustes propios de cada máquina (p. ej. hooks extra en `settings.json`, trust de proyectos en `config.toml`, modelo por defecto en `opencode.jsonc`) sobreviven a cada update.
 
 ## OpenCode (`~/.config/opencode`, rama `opencode`)
 
-OpenCode utiliza sus agentes integrados; esta rama no contiene un sistema multiagente personalizado:
+OpenCode conserva `build` como agente predeterminado y añade un sistema multiagente opcional:
 
-- **`AGENTS.md` global** — conserva únicamente las reglas de documentación Context7.
-- **Sin agentes ni orquestador personalizados** — no hay routing de modelos, bundles, artefactos ni pipeline personalizado.
-- **Skills compatibles** — el enlace `~/.claude/skills` expone las skills generales sincronizadas; `permission.skill` deniega la skill Claude `orchestrator` para no activar el runtime equivocado.
-- **`templates/opencode.jsonc`** — MCP `codegraph` global y MCP `playwright` headless habilitado para el agente integrado `build` (merge aditivo; JSON puro sin comentarios para que PowerShell lo parsee).
+- **`AGENTS.md` global** — flujo directo por defecto y escalado opcional, con aprobación, para trabajo genuinamente complejo.
+- **`orquestador`** — agente padre seleccionable por el usuario o delegable por `build`; coordina seis especialistas sin sustituir el flujo normal.
+- **Especialistas aislados** — exploración, investigación, planificación, diagnóstico, implementación BDD y revisión; solo el implementador escribe código de producción.
+- **Skills compatibles** — el enlace `~/.claude/skills` expone las skills generales sincronizadas; `permission.skill` deniega la skill Claude `orchestrator` para no activar el runtime equivocado. La skill propia de OpenCode vive en `skills/opencode-orchestrator/`.
+- **`templates/opencode.jsonc`** — agentes, permisos, profundidad de subagentes y MCP sincronizados mediante merge aditivo (JSON puro sin comentarios para que PowerShell lo parsee).
 
 En **WSL**, OpenCode lee configuración y skills externas desde el home de Linux. Puentes de una sola vez:
 
