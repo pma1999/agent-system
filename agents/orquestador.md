@@ -18,7 +18,9 @@ permission:
   edit:
     "*": deny
     "plans/**": allow
+    "**/plans/**": allow
     "/tmp/opencode/**": allow
+    "tmp/opencode/**": allow
   todowrite: allow
   skill:
     "*": allow

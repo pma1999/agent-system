@@ -9,7 +9,9 @@ permission:
   edit:
     "*": deny
     "plans/**": allow
+    "**/plans/**": allow
     "/tmp/opencode/**": allow
+    "tmp/opencode/**": allow
   skill:
     "*": allow
     orchestrator: deny
