@@ -1,5 +1,3 @@
-For top-level Claude sessions, any programming or software-engineering task must apply the `orchestrator` skill first. If you are running as any delegated specialist subagent, including `codebase-explorer`, `integration-researcher`, `implementation-planner`, `task-implementer-bdd`, `implementation-reviewer`, `root-cause-debugger`, or `codex:codex-rescue`, this requirement is already satisfied by the parent orchestrator: do not apply or invoke `orchestrator`; follow your specialist prompt directly.
-
 For any work that involves **frontend / UI** (building or reshaping a page, component, layout, screen, or visual design), ALWAYS also apply the available frontend skills (e.g. `frontend`, `frontend-design` — names may vary; apply whatever frontend/design skills exist) — **both when planning and when implementing**, never just one. They set the visual/UX bar the work must meet.
 
 ## Code retrieval — cheapest sufficient tool
@@ -15,10 +13,10 @@ A CodeGraph MCP server (`codegraph_*` tools) is configured: a tree-sitter-parsed
 | "What calls X?" / "What does X call?" | `codegraph_callers` / `codegraph_callees` |
 | "What breaks if X changes?" (blast radius) | `codegraph_impact` |
 | "Focused context for a task/area" | `codegraph_context` (one call — don't chain search + node) |
-| "Survey an unfamiliar module/topic" | `codegraph_explore` (token-heavy; prefer spending it once in `codebase-explorer`) |
+| "Survey an unfamiliar module/topic" | `codegraph_explore` (token-heavy; use sparingly) |
 | "Is the index healthy?" / "What files exist under path/" | `codegraph_status` / `codegraph_files` |
 
-**Ladder** — a menu keyed by question, not a try-in-order sequence: (1) already known — it's in `context-map.md`, a task brief, a report, `progress.md`, or something read this session: don't re-query; (2) `Glob`; (3) `Grep -n`; (4) `codegraph_*`; (5) targeted `Read` (`offset`/`limit` around a known line); (6) full `Read`; (7) `codegraph_explore` / broad multi-file reads. Enter at the rung whose question matches yours; among fitting tools pick the cheapest; stop once answered. For a relational question go **straight to codegraph** — don't grep first; for a textual/file question go straight to `Grep -n`/`Glob`. "Climbing" applies within the fitting tool (`Grep -n` → targeted Read → full Read), never as a grep-before-codegraph rule.
+**Ladder** — a menu keyed by question, not a try-in-order sequence: (1) already known — something already read or established this session: don’t re-query; (2) `Glob`; (3) `Grep -n`; (4) `codegraph_*`; (5) targeted `Read` (`offset`/`limit` around a known line); (6) full `Read`; (7) `codegraph_explore` / broad multi-file reads. Enter at the rung whose question matches yours; among fitting tools pick the cheapest; stop once answered. For a relational question go **straight to codegraph** — don't grep first; for a textual/file question go straight to `Grep -n`/`Glob`. "Climbing" applies within the fitting tool (`Grep -n` → targeted Read → full Read), never as a grep-before-codegraph rule.
 
 **Choose Grep/Glob over codegraph** when the target isn't a clean AST symbol or you need textual reach: strings, routes, env vars, feature flags, error/log messages, JSON/YAML/SQL/shell keys; every textual usage (comments, tests, templates); dynamic dispatch / DI-by-string / metaprogramming that static edges miss; a quick yes-no or count; or when codegraph returns nothing for something you know exists. **Choose codegraph over Grep** when the question is relational — what calls X, what X calls, what breaks, X's exact signature — or you'd otherwise grep-sweep the repo. Trust codegraph structural results; do not re-verify them with grep.
 
