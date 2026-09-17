@@ -1,0 +1,89 @@
+{
+  // Native V2 configuration for opencode2 (OpenCode 2 beta).
+  // Loaded on top of the shared V1 config (~/.config/opencode/opencode.jsonc)
+  // via OPENCODE_CONFIG, which is set by the `opencode2` alias in ~/.bashrc.
+  // OpenCode V1 (opencode) never reads this file.
+  "$schema": "https://opencode.ai/config.json",
+
+  // V1 top-level subagent_depth becomes experimental.subagent_depth in V2.
+  "experimental": {
+    "subagent_depth": 2
+  },
+
+  // MCP servers, native V2 shape: mcp.servers, disabled instead of enabled,
+  // per-purpose timeouts. (V1 file keeps its legacy mcp.* entries for V1;
+  // V2 native definitions take precedence.)
+  "mcp": {
+    "servers": {
+      "codegraph": {
+        "type": "local",
+        "command": ["codegraph", "serve", "--mcp"]
+      },
+      "playwright": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "@playwright/mcp@latest",
+          "--headless",
+          "--browser",
+          "chromium",
+          "--executable-path",
+          "/snap/bin/chromium"
+        ],
+        "timeout": {
+          "catalog": 20000,
+          "execution": 20000
+        }
+      },
+      "supabase": {
+        "type": "remote",
+        "url": "https://mcp.supabase.com/mcp?features=docs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching"
+      },
+      "artificial-analysis": {
+        "type": "local",
+        "command": ["artificial-analysis-mcp-server"]
+      }
+    }
+  },
+
+  // Global permission rules, ordered (last match wins).
+  // V1 "tools": {"playwright_*": false} -> deny rule; V1 "permission" -> skill rules.
+  "permissions": [
+    { "action": "playwright_*", "resource": "*", "effect": "deny" },
+    { "action": "skill", "resource": "*", "effect": "allow" },
+    { "action": "skill", "resource": "orchestrator", "effect": "deny" },
+    { "action": "skill", "resource": "opencode-orchestrator", "effect": "deny" }
+  ],
+
+  // Agent overrides, native V2 shape (prompt -> system, disable -> disabled,
+  // permission map -> permissions array). The orchestrator/specialist agents
+  // themselves are provided by the oh-my-opencode-slim plugin; the file-based
+  // orquestador system lives in ~/.config/opencode/agents/*.md (shared with V1).
+  "agents": {
+    "orchestrator": {
+      "permissions": [
+        { "action": "skill", "resource": "*", "effect": "allow" },
+        { "action": "skill", "resource": "opencode-orchestrator", "effect": "deny" }
+      ]
+    },
+    "build": {
+      "permissions": [{ "action": "playwright_*", "resource": "*", "effect": "allow" }]
+    },
+    "explore": { "disabled": true },
+    "general": { "disabled": true }
+  },
+
+  // oh-my-opencode-slim: no explicit entry needed. It is registered through
+  // the shared V1 entry in opencode.jsonc ("plugin": ["oh-my-opencode-slim@latest"]),
+  // which resolves to the latest version — the 2.2.11+ builds ship the native V2
+  // adapter ({ id, server, setup } + ./server export). Both V1 and V2 load the
+  // same cached 2.2.13 build, and the plugin's auto-updater keeps that cache
+  // current (requires bun, installed 2026-08-13). Do not add a "plugins" entry
+  // here: it would load a second instance and V2 aborts with "Duplicate plugin
+  // ID: oh-my-opencode-slim".
+
+  // Same shape in V1 and V2; keep as-is.
+  "model": "opencode/muse-spark-1.3-contributor-free",
+  "lsp": true
+}

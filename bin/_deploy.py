@@ -315,7 +315,9 @@ def merge_toml(target: Path, template: Path, dry: bool) -> int:
 TEMPLATE_MERGES = {
     "claude":   [("templates/settings.json", "settings.json", merge_json, None)],
     "codex":    [("templates/config.toml", "config.toml", merge_toml, toml_unplaced)],
-    "opencode": [("templates/opencode.jsonc", "opencode.jsonc", merge_jsonc, jsonc_unplaced)],
+    "opencode": [("templates/opencode.jsonc", "opencode.jsonc", merge_jsonc, jsonc_unplaced),
+                 # config del flujo V2 (`opencode2`), que es el que se usa a diario
+                 ("templates/opencode.v2.jsonc", "opencode.v2.jsonc", merge_jsonc, jsonc_unplaced)],
 }
 
 

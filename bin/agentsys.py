@@ -336,7 +336,7 @@ def cmd_install(args: argparse.Namespace) -> int:
             if moved:
                 print(f"            checkout legacy retirado -> {moved}")
     if not args.dry_run:
-        print(f"  copias de seguridad en {_deploy.BACKUPS / stamp}")
+        print(f"  copias de seguridad en {_deploy.backups() / stamp}")
     return 1 if refused_total else 0
 
 

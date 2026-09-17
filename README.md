@@ -42,6 +42,7 @@ mismo texto, y `verify` lo demuestra en cada ejecución.
 | `ROSTER_ADVISOR` | fila "tool nativa" | fila de despacho | fila de despacho |
 | `PROVENANCE` | `engine=claude-code \| model=opus` | `engine=codex \| model=gpt-5.6-sol` | `engine=opencode \| model=muse-spark-1.3` |
 | `MODEL_PIN` | perfil por rol en cada fichero | perfil por rol en cada TOML | roster entero a muse-spark-1.3/xhigh |
+| `MODEL` / `EFFORT` | por rol, en `[agents.<rol>]` | idem, se renderiza como `model_reasoning_effort` | idem, se renderiza como `variant` |
 
 **Bloques exclusivos** (secciones enteras, no tokens; viven en
 `source/orchestration/skill/sections/`):
@@ -55,8 +56,9 @@ mismo texto, y `verify` lo demuestra en cada ejecución.
 | `user-decision` | — | — | bloque de handoff a `build` |
 
 **Ficheros exclusivos de un harness** (`harness/<h>/files/`): `CLAUDE.md` (claude);
-`AGENTS.md` y `skills/orchestrator/agents/openai.yaml` (codex); `AGENTS.md`,
-`agents/orquestador.md` y `plugin/advisor-context.ts` (opencode).
+`AGENTS.md` y `skills/orchestrator/agents/openai.yaml` (codex); `AGENTS.md` y
+`plugin/advisor-context.ts` (opencode). El agente padre `orquestador` no es un fichero literal:
+es un rol mas del roster, declarado solo para opencode, para que `models` pueda fijar su modelo.
 
 **Roles.** Los seis especialistas existen en los tres. `advisor` existe como subagente sólo en Codex
 y OpenCode: **Claude Code tiene `advisor` como tool nativa**, disponible tanto para el hilo
@@ -74,7 +76,8 @@ Nunca edites las carpetas vivas: `install` las sobrescribe y `verify` canta la d
 | El modelo operativo de orquestación | `source/orchestration/skill/SKILL.md` |
 | Algo cierto sólo en un harness | `source/orchestration/skill/sections/<ancla>.<harness>.md` |
 | Añadir/quitar un rol, o su descripción | `source/orchestration/roles.toml` |
-| Modelo, effort, permisos, colores, nombres de tool | `harness/<h>/adapter.toml` |
+| El modelo o el effort de un rol | `agentsys models` (no edites el adaptador a mano) |
+| Permisos, colores, nombres de tool, sandbox | `harness/<h>/adapter.toml` |
 | Una skill compartida por los tres | `source/skills/<skill>/` |
 | Una skill de un solo harness | `harness/<h>/files/skills/<skill>/` |
 | `CLAUDE.md`, `AGENTS.md`, plantillas, parches, reglas | `harness/<h>/files/` |
@@ -102,6 +105,44 @@ carpeta viva), `install --dry-run`, `install --force`, `install --retire-legacy`
 **Desde WSL**, `~` es el home de Linux pero Claude Code y Codex leen el de Windows. `agentsys` lo
 detecta y avisa; pásale `--home /mnt/c/Users/<usuario>` (o `AGENTSYS_HOME`) si de verdad quieres
 lanzarlo desde ahí. Ver [docs/INSTALACION.md](docs/INSTALACION.md).
+
+## Modelos
+
+El modelo y el effort de cada rol viven en `harness/<h>/adapter.toml`, en claves estructuradas
+(`[agents.<rol>]` -> `model`, `effort`), y el frontmatter los referencia con `{{MODEL}}` y
+`{{EFFORT}}`. Un **perfil** es un fichero pequeño que fija esos dos valores para todo el roster:
+
+```
+harness/<h>/model-profiles/<nombre>.toml
+```
+
+```bash
+python bin/agentsys.py models list                              # perfiles de los tres; * = el vigente
+python bin/agentsys.py models show ox-alpha-free-max --harness opencode
+python bin/agentsys.py models apply ox-alpha-free-max --harness opencode
+python bin/agentsys.py models set --harness claude --model opus --effort xhigh
+python bin/agentsys.py models set --harness codex --model gpt-5.6-sol --role implementation-planner
+python bin/agentsys.py models save mi-perfil --harness opencode -m "por que lo guardo"
+```
+
+`apply` y `set` reescriben el adaptador y vuelven a renderizar; después hace falta `install`.
+
+**Por qué está apartado por harness.** OpenCode tiene muchos más modelos disponibles y cambia con
+frecuencia — de ahí sus once perfiles. Claude y Codex cambian poco y arrancan con un único perfil
+`actual`. El mecanismo es el mismo; lo que no se comparte son los perfiles, porque un nombre de
+modelo no significa nada fuera de su harness.
+
+**`--scope`, sólo relevante en OpenCode.** `oh-my-opencode-slim` (OMO) es *otro* sistema de agentes
+—el flujo por defecto de OpenCode, con su propio `orchestrator`, `oracle`, `librarian`— y su config
+es estado local de cada máquina que no viaja en el repo. Por eso:
+
+| `--scope` | Qué toca |
+|---|---|
+| `ours` (por defecto) | sólo el roster del orquestador |
+| `omo` | sólo los agentes del preset activo de `oh-my-opencode-slim.json` |
+| `both` | los dos |
+
+Con `--omo-preset <nombre>` se apunta a un preset distinto del activo.
 
 ## Qué garantiza `verify`
 
@@ -158,7 +199,8 @@ docs/INSTALACION.md       PC nuevo, WSL, problemas típicos
 docs/HARNESS-OPENCODE.md  manual concreto de la instalación OpenCode
 source/orchestration/     roles.toml, skill/SKILL.md + sections/, agents/<rol>.md
 source/skills/            skills desplegadas en los tres harnesses
-harness/<h>/adapter.toml  tokens, envoltorios por rol, frontmatter de la skill
+harness/<h>/adapter.toml  tokens, modelo/effort y envoltorio por rol, frontmatter de la skill
+harness/<h>/model-profiles/ perfiles de modelos de ese harness
 harness/<h>/files/        ficheros literales sólo de ese harness
 rendered/<h>/             salida determinista, commiteada
 bin/agentsys.py           build | verify | status | install | adopt | publish

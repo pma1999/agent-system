@@ -115,6 +115,24 @@ Un rol declarado en ≥2 harnesses entra automáticamente en el check de identid
   `sections/<nombre>.<harness>.md` para cada harness que la tenga. Un harness sin fichero
   simplemente no recibe nada: el ancla y la línea en blanco siguiente desaparecen.
 
+## Añadir un perfil de modelos
+
+```toml
+# harness/opencode/model-profiles/<nombre>.toml
+description = "para que sirve este perfil"
+
+[roles.codebase-explorer]
+model = "..."
+effort = "xhigh"
+```
+
+Un rol que el harness no tenga se ignora con aviso, así que un perfil puede quedarse corto sin
+romper nada. Lo normal no es escribirlo a mano: se ajusta con `models set` y se congela con
+`models save <nombre>`.
+
+No edites `model`/`effort` del adaptador a mano salvo que estés cambiando el *valor por defecto*
+del sistema; para probar modelos, usa un perfil. Así queda registro de qué combinación probaste.
+
 ## Promover una skill a compartida
 
 Requisito: que sea idéntica (o deba serlo) en ≥2 harnesses y no dependa de herramientas propias de
@@ -156,6 +174,11 @@ Correcciones aplicadas al unificar, que no venían de ninguno de los dos:
   se conservan.
 - **Las ramas `master`, `codex` y `opencode`** del mismo repo, cuyos working trees eran las carpetas
   de configuración. Congeladas como historia, con tags `pre-unificacion-20260917-*`.
+- **`scripts/switch-models.sh` y `model-profiles/` de OpenCode.** Hacían `sed -i` sobre
+  `agents/*.md` en la carpeta viva y guardaban perfiles como copias completas de los ficheros de
+  agente. Con el sistema nuevo eso lo revertía el siguiente `install`. Lo sustituye
+  `agentsys models`, que edita el canon. Los 10 perfiles están migrados; el original queda en
+  `~/.agent-system-backups/20260917-switch-models/`.
 - **`patches/agent-parity-check.mjs`**, que comparaba los gemelos `.md`/`.toml` de los agentes. Lo
   sustituye el check 2 de `verify`, que es más fuerte: compara los tres a la vez y contra el
   canónico, no dos entre sí.

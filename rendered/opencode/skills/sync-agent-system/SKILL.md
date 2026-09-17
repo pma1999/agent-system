@@ -29,8 +29,10 @@ python bin/agentsys.py verify
 ```
 
 `install` backs up every file it replaces under `~/.agent-system-backups/<timestamp>/` and merges
-the config templates additively (`settings.json`, `config.toml`, `opencode.jsonc`): missing system
-keys are added, existing values are never overwritten.
+the config templates additively (`settings.json`, `config.toml`, `opencode.jsonc` and
+`opencode.v2.jsonc`): missing system keys are added, existing values are never overwritten, and
+comments are preserved. A nested key it cannot place is reported as `REVISA A MANO` with its exact
+path rather than silently skipped.
 
 ## Publish changes made here
 
@@ -52,10 +54,11 @@ Never edit the live folders: `install` overwrites them and `verify` reports the 
 | A specialist's prompt, for all three harnesses | `source/orchestration/agents/<role>.md` |
 | The orchestration operating model | `source/orchestration/skill/SKILL.md` |
 | Something true of only one harness | `source/orchestration/skill/sections/<anchor>.<harness>.md` |
-| A model, effort, permission or tool name | `harness/<harness>/adapter.toml` |
+| A permission, colour, tool name or sandbox | `harness/<harness>/adapter.toml` |
 | A skill shared by the three | `source/skills/<skill>/` |
 | A skill of one harness only | `harness/<harness>/files/skills/<skill>/` |
 | `CLAUDE.md`, `AGENTS.md`, templates, patches | `harness/<harness>/files/` |
+| The model or effort of a role | `agentsys models`, never the adapter by hand |
 
 After any edit: `build`, then `verify`, then `install`.
 
@@ -71,6 +74,12 @@ After any edit: `build`, then `verify`, then `install`.
   `--force`. Do not choose silently.
 - `adopt` pulls a hand-made change in a live folder back into the canonical source. It refuses for
   generated files and tells you which canonical file to edit instead.
+- `models list` shows the model profiles of the three harnesses and marks the one in effect.
+  `models apply <name> --harness <h>` switches the whole roster; `models set --harness <h>
+  --model <m> [--effort <e>] [--role <r>]` changes one value. Both rewrite the canonical adapter
+  and re-render, so `install` still has to run afterwards. On OpenCode, `--scope omo` or `both`
+  also touches `oh-my-opencode-slim.json`, which is another agent system and machine-local: the
+  default is `ours` and never touches it.
 - `status` gives the short version: what is managed, what drifted, whether a legacy checkout is
   still active in a live folder.
 
