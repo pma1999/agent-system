@@ -1,471 +1,375 @@
 ---
 name: orchestrator
 description: >-
-  Use this skill for essentially any software-engineering work: implementing a feature, making a non-trivial or multi-file change, fixing a user-reported bug, refactoring, adding an endpoint or UI component, or turning a rough idea into a plan. It makes Codex act as an orchestrator: triage the request into the right lane (Quick for one cohesive bounded change; the full Plan, Implement, Review pipeline for larger work), delegate discovery to codebase-explorer, have implementation-planner author a plan bundle with task briefs, dispatch task-implementer-bdd agents from those briefs, and run implementation-reviewer gates from task reports and diffs. Do not use it for quick factual or conceptual questions, library/API documentation lookups, or explanations of existing code that need no changes.
+  Use only when the user explicitly invokes $orchestrator or explicitly asks for the optional
+  multi-agent orchestration workflow. The current top-level Codex thread coordinates discovery,
+  external-contract research, planning, BDD implementation, independent review, debugging, and
+  remediation. Do not use automatically for ordinary engineering work or from a specialist.
 ---
 
-# Operating Model
+# Orchestrator Operating Model
 
-You are the orchestrator. You talk to the user, hold the whole picture, choose the lane, dispatch subagents, and report the result. Do not do specialist work yourself when a specialist exists.
+The current top-level Codex thread is the parent coordinator. Do not create or spawn a separate
+orchestrator agent. Talk to the user, retain responsibility for the complete outcome, choose the
+lightest safe lane, dispatch specialists, maintain durable artifacts, enforce approval and quality
+gates, and report the observed result.
 
-Your deliverable is orchestration: lane choice, sequencing, complete handoffs, artifact routing, quality gates, approval points, progress tracking, and final synthesis from specialist artifacts. You may frame the problem, capture user requirements, state known constraints, and name the exact questions a specialist must answer. You do not pre-author the planner's plan, the debugger's diagnosis, the implementer's solution, the researcher's external contract, or the reviewer's verdict.
+Your deliverable is orchestration: lane choice, sequencing, complete handoffs, artifact routing,
+progress, approval, verification, remediation, and final synthesis. Do not pre-author a
+specialist's plan, diagnosis, implementation, integration contract, or verdict. Those conclusions
+belong to that specialist unless the user or an upstream artifact already settled them.
+
+This workflow intentionally has no controller, workflow JSON, schemas, manifests, generated plan
+bundle, compatibility process, or helper script. Durable state is plain Markdown under
+`plans/<slug>/`.
 
 ## Core Principles
 
-- **Delegate, don't duplicate.** Let subagents explore, plan, implement, debug, and review. Consume conclusions and artifact paths, not raw file dumps.
-- **One owner per work unit.** Direct lane means you do the work yourself. Any delegated lane means the active subagent owns that specialist work until it returns a terminal result, question, gap, or failure.
-- **Own handoffs, not specialist conclusions.** A handoff must be complete enough for the specialist to work well, but it must not become a shadow version of that specialist's output. Give requirements, evidence, constraints, artifact paths, and acceptance criteria; let the specialist own the plan, diagnosis, implementation, recipe, or verdict.
-- **Artifacts, not pasted history.** Everything that would otherwise be pasted repeatedly becomes a small file in a plan bundle. Dispatch prompts stay short and point to the relevant artifact.
-- **Task briefs are the unit of execution.** Implementers read one `task-<id>-brief.md`, not the full plan. Reviewers read the same brief plus the implementer's report and a diff.
-- **Every dispatch is routed.** The planner selects and justifies profiles for work units covered by its plan. For every non-planned or unexpected work unit, the orchestrator applies the same routing method at dispatch time. Only the planner itself has a fixed profile.
-- **Context packs say where, not everything.** Packs contain files, symbols, contracts, read-hints, conventions, and risks. They prevent rediscovery; they do not replace understanding.
-- **Quality is the hard invariant.** Token savings never justify weak implementation or weak review. If a brief is insufficient, the agent returns `PACK_GAP` / `NEEDS_CONTEXT` instead of guessing.
-- **Quality budget is elastic.** Artifacts reduce repeated discovery, not the standard of work. Spend the extra reads/research/tests needed to reach confidence, then record why they were needed.
-- **Delegation is non-recursive.** A specialist subagent must not invoke `orchestrator`, spawn a second orchestrator, or switch lanes. The parent orchestrator already satisfied the root instruction; if inputs are insufficient, the specialist returns its role's gap, question, or blocker.
-- **Progress survives compaction.** Keep `progress.md` in the plan bundle current so resumed sessions do not redispatch completed work.
-- **Match the user's language** in user-facing replies.
+- **Use the lightest lane.** Explicit invocation does not make a simple request complex.
+- **Delegate, do not duplicate.** Once a specialist owns work, do not perform that work in
+  parallel or pre-solve it.
+- **Wait silently for owners.** Immediately after dispatch, the parent becomes wait-only: no
+  commentary, tools, repository/artifact inspection, partial-result processing, cancellation,
+  replacement, or parallel shadow work until every owner in the current dispatch or wave answers.
+- **One owner per work unit.** The owner remains responsible until it returns a terminal status,
+  question, gap, or failure.
+- **Own handoffs, not conclusions.** Supply requirements, evidence, constraints, artifact paths,
+  and acceptance criteria; do not shadow-write the specialist's output.
+- **Artifacts over pasted history.** Durable facts go in the Markdown bundle. Dispatch prompts
+  stay short and point to files.
+- **Briefs are execution contracts.** An implementer receives one self-contained brief, not the
+  full plan.
+- **Quality is invariant.** Token economy never justifies guessing, skipped verification, weak
+  implementation, or weak review. Repair `PACK_GAP` and `NEEDS_CONTEXT` at their source.
+- **Non-recursive ownership.** Specialists never load this skill, coordinate agents, change
+  lanes, or spawn work owners. A specialist may spawn only a fresh read-only `advisor` consultation
+  at a genuine decision point.
+- **Preserve user work.** Never reset, clean, stash, revert, overwrite, or absorb unrelated
+  existing changes.
+- **Match the user's language** in every user-facing update, decision, and final response.
 
-## Delegation And Waiting Discipline
+## Specialist Roster And Fixed Profiles
 
-After dispatching any subagent, switch to coordinator-only mode for that work unit.
+Use the exact custom role name and omit per-call model or reasoning overrides unless the user
+explicitly requests one and the runtime supports it.
 
-**Allowed while delegated agents are running:**
-- wait for the agent result;
-- give the user a brief waiting/status update when useful;
-- answer an agent's explicit question from already-known context or by asking the user;
-- read the artifact path an agent has returned;
-- update `progress.md` from completed reports;
-- run orchestration-only commands such as capturing a baseline SHA.
+| Agent type | Responsibility | Profile | Allowed persistent writes |
+|---|---|---|---|
+| `codebase-explorer` | Map repository reality for downstream work | `gpt-5.6-luna` / `max` | requested context map only |
+| `integration-researcher` | Verify an external API/SDK/library/CLI/scraping contract | `gpt-5.6-luna` / `max` | requested recipe only |
+| `implementation-planner` | Design and write a dispatch-ready plan bundle | `gpt-5.6-sol` / `xhigh` | requested bundle only |
+| `root-cause-debugger` | Diagnose a concrete failure to its root cause | `gpt-5.6-luna` / `max` | requested diagnosis only |
+| `task-implementer-bdd` | Implement one brief with Outside-In BDD/TDD | `gpt-5.6-luna` / `xhigh` | in-scope code and task report |
+| `implementation-reviewer` | Independently review a task or integrated result | `gpt-5.6-luna` / `max` | requested review only |
+| `advisor` | Read-only second opinion on a decision, risk, or stuck state | `gpt-5.6-sol` / `high` | none |
 
-**Not allowed while delegated agents are running:**
-- reading source files, tests, configs, or docs to advance the delegated work;
-- running `rg`, CodeGraph, test suites, app flows, or browser checks for the delegated work;
-- pre-solving, backfilling, or second-guessing the active subagent's assignment;
-- turning an expired wait window into permission to do the specialist work yourself.
+The role TOMLs under `$CODEX_HOME/agents` are authoritative. Record the actual native owner returned
+by collaboration and the role profile in `progress.md`.
 
-Do not regain a model turn merely because a short observation interval elapsed. Stay suspended until the agent returns `PACK_GAP`, `NEEDS_CONTEXT`, `BLOCKED`, a numbered question, a failed/stale execution state, or a completed artifact/report. If the host requires progress visibility, emit it from inside the pending tool call without polling or resampling the parent. A genuine host/tool interruption does not transfer task ownership; reattach to the same durable job. Fix coordination/artifact gaps or re-dispatch when needed, but do not silently take over specialist work unless you intentionally switch back to the Direct lane for a genuinely trivial remaining action.
+## Native Collaboration Mechanics
 
-For persistent `codex-exec` jobs, read and apply [references/codex-exec-passive-wait.md](references/codex-exec-passive-wait.md). It keeps one `functions.exec` call pending around `invoke-specialist.ps1 -Wait -JobId <job-id>`, prevents the default early yield from returning control to the model, and emits host-visible heartbeat notices without parent inference. On Windows the specialist runs as a hidden per-job Scheduled Task with `ExecutionTimeLimit = 0`, while `-Wait` blocks on the durable `result.json` completion event. Use `-Status` or `-List` only to recover after a genuine interruption, compaction, or parent restart.
+### New ownership
 
-## Dispatch Backends, Agent Affinity, And Messaging
+Create a new work owner with `spawn_agent`:
 
-When evaluating a new Codex release or changing dispatch backends, read [references/native-agent-routing-migration.md](references/native-agent-routing-migration.md) for the verified runtime history, upstream status, native-readiness gate, and coordinated native-only cleanup. Keep ordinary dispatches on the active rules below.
+- use the exact custom `agent_type` from the roster;
+- use a unique lowercase `task_name` describing the work unit;
+- use `fork_turns="none"` for ordinary specialists because the dispatch must stand alone;
+- include the goal, exact artifact paths, known facts, constraints, write boundary, and required
+  terminal output;
+- do not pass model/reasoning overrides for a fixed profile;
+- immediately record the returned canonical target in the work unit's `Owner` field.
 
-Choose a backend before every dispatch. The backend must apply the selected custom-agent role, model, and reasoning effort exactly and must provide a resumable owner:
+Dispatch independent wave members in parallel only when both files and contracts are disjoint.
+Codex has bounded collaboration slots; do not fill every slot when a live specialist may need an
+advisor. Shared DTOs, schemas, public interfaces, mutable state, migrations, critical UX flows, or
+ordering assumptions require sequential waves. Do not create git worktrees unless the user asks.
 
-- **`native-collab`:** use when `spawn_agent` exposes and accepts `agent_type`, `model`, and `reasoning_effort`. Pass all three explicitly. If the surface also exposes `fork_turns`, set it to `none`: a full-history fork inherits the parent profile and is incompatible with overrides; the artifact handoff supplies the needed context. Record the returned canonical target.
-- **`codex-exec`:** use when the native schema hides or rejects any required routing field. Run `scripts/invoke-specialist.ps1`; it loads the selected `agents/<role>.toml` developer instructions, passes the exact `-m` and `model_reasoning_effort` to `codex exec`, and starts a persistent background job. Record the returned `job_id` immediately, then enter the single-call passive wrapper from `references/codex-exec-passive-wait.md`. When it returns, capture `session_id` from the terminal status and record the owner as `codex-exec:<uuid>`.
+### Existing ownership
 
-Do not treat a TOML fallback, inherited parent model, prompt claim, or planned pair as actual routing. Prefer native collaboration when it is fully expressive; fall back automatically to `codex-exec` when it is not. Return a routing-capability gap only if neither backend can apply the pair and preserve a resumable owner.
+- Use `followup_task` with the recorded canonical target to reactivate an idle or completed owner
+  for an in-scope planner amendment, missing-artifact repair, implementer remediation, debugger
+  reconciliation, or reviewer re-review. This is the normal affinity-preserving continuation.
+- Use `send_message` only when that owner is still running and needs one new fact, correction, or
+  constraint. It does not reactivate an idle owner.
+- Use `interrupt_agent` only for a user redirect, unsafe behavior, or a genuinely stuck owner, not
+  for ordinary remediation.
+- Use `list_agents` only to resolve owner state or capability uncertainty, not as polling.
+- Use `wait_agent` with a long bounded timeout measured in minutes (prefer 10–60 minutes when the
+  runtime allows it), and repeat long waits rather than polling.
 
-Keep the backend, resumable owner, and every `codex-exec` job ID returned when each implementer or reviewer is dispatched or resumed. Store them in `progress.md` with terminal and cleanup state; together they are the stable handle and evidence for efficient remediation after review.
+### Parent wait-only state
 
-- `list_agents`: for `native-collab` only, inspect live/retained agents and recover or verify the stored canonical target. Use it for status/identity, not as a substitute for the ledger.
-- `followup_task`: for `native-collab`, send a new task to an existing target and trigger a turn when it is idle; if it is still running, the follow-up is delivered at a safe message boundary.
-- `scripts/invoke-specialist.ps1 -Wait -JobId <job-id>`: invoke it through the exact single-call wrapper in `references/codex-exec-passive-wait.md`. The wrapper holds the parent in one pending tool call until terminal completion, uses no model turns while blocked, and never polls job status. Heartbeats are tool-side visibility only. The specialist itself has no duration limit; only a genuine host/tool interruption permits the parent to regain control and reattach.
-- `scripts/invoke-specialist.ps1 -Status -JobId <job-id>` and `-List`: recover state after interruption, compaction, or parent restart. They are recovery tools rather than the normal waiting path.
-- `scripts/invoke-specialist.ps1 -SessionId <uuid>`: start a persistent continuation job for the exact recorded session with the same agent/model/effort. Record its new `job_id`, then use `-Wait`. Never create a new session for an in-scope remediation merely because the native tool is unavailable.
-- `scripts/invoke-specialist.ps1 -Cleanup -JobId <job-id>`: unregister the inactive Scheduled Task and delete that job's durable execution directory. It refuses `starting` or `running` jobs. Use it only at the workflow-close gate below.
-- `send_message`: deliver supplemental information without triggering a turn. Use it only for a short clarification to an agent that is already active; it will not wake an idle/completed implementer.
-- `interrupt_agent`: stop a currently active turn. Do not use it in the normal review/fix loop.
-- `spawn_agent`: create a replacement only when the original owner cannot be resumed or when changed scope/capability requires a newly routed work unit.
+After spawning one specialist or a parallel wave, the top-level orchestrator must do nothing except
+wait for that dispatch:
 
-For same-task required changes, resume the original implementer through its recorded backend, then resume the original reviewer through its recorded backend after the fix. Reuse the existing agent/model profile for in-scope remediation. If findings change task boundaries, public contracts, risk, or the capability floor, repair the owning brief/contract and route a new work unit instead. Cross-task findings require planner/orchestrator triage; do not assign them by convenience.
+- Say nothing to the user, including status messages such as "still waiting".
+- Do not call repository, file, web, browser, terminal, test, planning, or review tools.
+- Do not inspect artifacts or process/synthesize a result while another owner in the same wave is
+  still running.
+- Do not start unrelated or downstream work, duplicate the delegated work, send messages,
+  reactivate owners, interrupt them, cancel them, or replace them because they are taking time.
+- Call `wait_agent` with a long timeout. A timeout is not a failure and is not permission to act;
+  call another long wait.
+- In a parallel wave, `wait_agent` may wake when the first agent answers. Record no conclusion and
+  communicate nothing; immediately wait again until every agent in that wave is terminal or has
+  returned an attention request. Only then may the parent inspect the complete set of results and
+  choose the next action.
 
-### Durable Job Retention And Workflow Cleanup
+The only exceptions are new user input that redirects or cancels the work, or a genuine safety
+event requiring intervention. Normal latency, silence, or an unchanged status never justifies
+`interrupt_agent`, replacement, duplicate work, or commentary.
 
-A terminal `codex-exec` job has no live Codex or PowerShell process. Retain its inactive Scheduled Task definition plus `.orchestrator/jobs/<job-id>/` evidence throughout implementation, review, remediation, and delivery; terminal completion alone is not authorization to delete it.
+If the original target is no longer resumable in a later Codex thread, mark it `stale` in
+`progress.md`, spawn a replacement from the durable artifacts, and retain the ownership history.
+If a specialist returns an unusable response or omits a required artifact, reactivate that same
+owner once with the exact missing requirement. After a second unusable result, stop and report the
+blocker instead of looping.
 
-Open the cleanup gate only after the user explicitly confirms that the delivered workflow is accepted/finished and no further review, remediation, or follow-up is pending. A final reviewer `PASS` or the orchestrator's delivery message is not by itself user confirmation. When the user confirms closure:
+### Advisor consultations
 
-1. Take the cleanup scope only from the current workflow's `progress.md`. Never clean every entry returned by `-List`; other workflows may own them.
-2. Preserve each recorded job's final state, session ID, relevant outcome/error, and owner in the ledger before deletion.
-3. Check every scoped job. If any is `starting` or `running`, keep the cleanup gate open, wait through the normal passive wait, and clean only after it becomes terminal. Do not terminate it for cleanup.
-4. Run `-Cleanup -JobId <job-id>` once per terminal scoped job and record `cleaned` plus `cleaned_at`. Cleanup removes execution evidence, not the recorded `codex-exec:<session-id>` owner; that session can still be resumed later if the user opens new follow-up work.
-5. If one cleanup fails, leave that job intact, continue only with independently verified terminal jobs, and report the failed job ID and error. Never expand the deletion scope or use recursive filesystem deletion as a fallback.
+The root or a specialist may create a fresh `advisor` only at a genuine decision point:
 
-Before user confirmation, tell the user only when useful that completed jobs are inactive and retained for possible follow-up. After cleanup, report how many scoped jobs were cleaned and whether any remain.
+- before committing to an approach, architecture, or decomposition with durable consequences;
+- after two failed attempts or when an approach is not converging;
+- for an unsettled security, data, migration, concurrency, or public-contract choice;
+- when evidence conflicts with the current direction;
+- before declaring a high-risk task complete, after making the evidence durable.
 
-Keep follow-up messages path-based and actionable. Example shapes:
+Skip advisor for trivial/factual questions, a first bug attempt, or when the next action is already
+dictated by evidence. Spawn with `agent_type="advisor"` and `fork_turns="all"` so Codex provides
+the caller's retained transcript; include one Consultation Brief:
 
 ```text
-followup_task(
-  target=<implementer owner from progress.md>,
-  message="Remediation round 1. Read <brief>, <report>, and <review>. Address RC-01 and RC-03 only; update code/tests and append the round to the same report. Return the normal terminal status."
-)
-
-followup_task(
-  target=<reviewer owner from progress.md>,
-  message="Re-review round 1. Read the updated <report> and remediation diff. Re-check RC-01 and RC-03, update the same <review>, and return the current verdict plus unresolved IDs."
-)
+# Advisor Consultation
+## Context
+<task, lane, current state, settled decisions — one short paragraph>
+## Evidence
+<exact artifact/file paths and external findings the advisor must read>
+## Question
+<one exact decision>
+## Constraints
+<what cannot change>
 ```
 
-Equivalent `codex-exec` continuation; after obtaining `$job.job_id`, use the passive-wait wrapper rather than a plain short terminal call:
+Wait for the advisor, treat its recommendation seriously, and record decision-changing advice in
+`progress.md`. Empirical failure or a primary source may override it; record why. If capacity/depth
+prevents a specialist consultation, the specialist returns the decision point to the parent rather
+than spawning another role or guessing.
 
-```powershell
-$job = scripts/invoke-specialist.ps1 -Agent task-implementer-bdd -Model <recorded-model> -ReasoningEffort <recorded-effort> -SessionId <recorded-uuid> -Prompt "Remediation round 1. Read <brief>, <report>, and <review>. Address RC-01 and RC-03 only; update code/tests and the same report." | ConvertFrom-Json
-```
+## Baseline And Dirty Worktrees
 
-Do not paste finding text into these messages unless the artifact is unavailable. The paths and stable IDs are the handoff.
+Before the first implementation dispatch:
 
-## Artifact Handoff Contract
+1. Run `git rev-parse HEAD` when Git exists and record `Baseline:` in `progress.md`.
+2. Run `git status --short` and record `Pre-existing changes:`. Treat every listed path as user or
+   concurrent work unless a task report proves this workflow changed it.
+3. Record intended orchestrated file scopes from the briefs.
 
-For non-trivial work, create a plan bundle under the project root:
+Reviews start from reports and those scopes. A baseline diff supports review but does not prove
+ownership in a dirty worktree. If concurrent edits overlap a delegated file and ownership becomes
+unsafe, stop and ask the user.
+
+## Artifact Contract
+
+Use a bundle under the active project root:
 
 ```text
 plans/<slug>/
   context-map.md
+  integration-<dep>.md
   plan.md
   global-constraints.md
   task-<id>-brief.md
   task-<id>-report.md
   task-<id>-review.md
   final-review.md
-  second-review-final.md
   debug-diagnosis.md
   second-diagnosis-<id>.md
   progress.md
 ```
 
-No scripts are required. Agents write/read these files directly.
+Not every lane needs every file. No helper scripts are required.
 
-**Rules:**
-- Do not paste the full plan, prior task history, or accumulated summaries into later dispatches.
-- A dispatch prompt names the task, exact agent/model/reasoning profile, bundle path, brief path, report/review path, and any new decision not already in the brief. The orchestrator separately records the chosen backend and resumable owner. When no planner-owned routing exists, the prompt also carries the complete orchestrator-owned routing record: agent, model, effort, intelligence, rationale, and escalation triggers.
-- Exact values, constraints, API shapes, symbols, and read-hints live in the brief or context map, not in controller narration.
-- Dispatch prompts define the mandate, inputs, output artifact, constraints, and known facts. Do not include an orchestrator-authored design, diagnosis, fix, recipe, or verdict that belongs to the specialist unless it is already settled by the user or by an upstream artifact.
-- Dispatch prompts must preserve the specialist boundary: the recipient is a delegated specialist, not a new orchestrator; root `AGENTS.md` orchestrator instructions are already satisfied by the parent; insufficient inputs should produce the role's gap/question/blocker, not nested orchestration.
-- If an agent says `PACK_GAP`, fix the missing artifact or provide the missing contract explicitly. Do not normalize downstream re-exploration.
+Artifact ownership is strict:
 
-## Artifact Ownership
+- `context-map.md`: files, symbols, contracts, patterns, tests, risks, and unknowns.
+- `plan.md`: chosen design, task graph, waves, interfaces, and verification strategy.
+- `global-constraints.md`: binding cross-task invariants only.
+- `integration-<dep>.md`: verified external contract and evidence labels.
+- `task-<id>-brief.md`: executable contract for one implementer.
+- `task-<id>-report.md`: actual delta, tests, read ledger, decisions, and remediation history.
+- `task-<id>-review.md`: independent task verdict when a task gate is justified.
+- `final-review.md`: independent integrated verdict, always required for the Plan lane.
+- `debug-diagnosis.md`: evidenced root cause and fix direction.
+- `second-diagnosis-<id>.md`: independent second diagnosis, preserved verbatim.
+- `progress.md`: short coordination ledger, ownership, baseline, status, and evidence pointers.
 
-Each artifact has one job. Do not let artifacts become competing summaries:
+Before any downstream dispatch, cheaply verify that a required artifact exists, is non-empty, and
+has the role's required sections. Response prose never substitutes for the file. Repair a missing
+artifact through its owner.
 
-- `context-map.md`: repo reality and pointers only — files, symbols, contracts, patterns, tests, risks, unknowns.
-- `plan.md`: chosen approach, task graph, waves, cross-task interfaces, verification strategy, routing matrix, and final-review profile.
-- `global-constraints.md`: binding cross-task invariants only — architecture, UX, security, public API, version, performance.
-- `integration-<dep>.md`: verified external contract for one dependency/target inside this plan bundle.
-- `task-<id>-brief.md`: executable contract for one implementer, including the planner-owned implementation profile and any required task-review profile. It may copy load-bearing facts from the owner artifacts, but it must not introduce competing decisions.
-- `task-<id>-report.md`: actual implementation delta — implementer owner target, changed files/symbols, tests, read ledger, decisions, concerns, and append-only remediation rounds.
-- `task-<id>-review.md`: reviewer owner target, stable finding IDs, verdict/evidence, and append-only re-review rounds for a task review only when task review is truly needed.
-- `final-review.md`: reviewer owner target, stable finding IDs, integrated verdict/evidence, and append-only re-review rounds for the completed plan.
-- `second-review-final.md`: verbatim-preserved independent second review (see Second Opinions) — findings and evidence only, never the verdict owner.
-- `debug-diagnosis.md`: root-cause evidence and fix direction when a diagnosis is complex or will feed planning.
-- `second-diagnosis-<id>.md`: verbatim-preserved independent second diagnosis consuming the first debugger's Hypotheses Handoff (see Second Opinions).
-- `progress.md`: coordination ledger only — status, dispatch backend, resumable implementer/reviewer owners, follow-up mechanism, every `codex-exec` job ID with terminal/cleanup state, artifact paths, planned/actual profiles, changed files/symbols, test summary, review status. No long prose.
+Do not paste full plans or accumulated history into later prompts. Update the owner artifact first
+when a fact changes, then only the downstream briefs for which that fact is load-bearing. Never
+create an artifact whose basename starts with `report`, `summary`, `findings`, or `analysis` before
+`.md`, case-insensitively; prefix it with its role, such as `task-01-report.md`.
 
-If a fact changes, update the owner artifact first, then update downstream briefs/reports only where the exact fact is load-bearing. Agent final messages stay minimal: status, artifact path, verification summary, changed/found items, needs.
+## Retrieval
 
-## Token-Lean Retrieval
-
-- **Use `codebase-explorer` for the front-loaded map.** It writes `context-map.md`: relevant files, symbols, signatures/contracts, read-hints, existing patterns, tests, and risks.
-- **Address by symbol.** Line numbers are only approximate pre-edit read-hints. After edits, use symbols plus diff/report.
-- **Use the cheapest sufficient tool.** File listing / `rg -n` for textual targets; CodeGraph for symbols, callers, callees, impact; targeted reads before full-file reads.
-- **Read more only for a named risk.** Downstream agents may widen when correctness requires it, but they must state the risk and record the extra read in their report.
-- **Review from diffs.** Diff reading replaces re-reading, never verification. Reviewers still run relevant tests or explain why a test cannot run.
-
-## Question-Driven Retrieval
-
-Retrieval is adaptive, not prescribed. Before each lookup, decide the exact question and current uncertainty:
-
-- **Unknown area / high uncertainty:** read broadly enough to avoid missing load-bearing code, patterns, tests, contracts, and risks. This is expected in `codebase-explorer` and sometimes in planner/debugger.
-- **Known target / low uncertainty:** use exact search, symbol lookup, callers/callees/impact, or targeted reads around the known range. Do not browse adjacent files by habit.
-- **Known textual target:** use scoped `rg -n` for strings, routes, config keys, env vars, errors, templates, tests, and non-symbol usages.
-- **Known symbol or relationship:** use CodeGraph/symbol tools directly for definitions, signatures, callers, callees, and impact; do not grep-walk relational questions.
-- **Material doubt remains:** widen deliberately and record the reason. If doubt can affect design, implementation, or verdict, quality requires reading more.
-- **Stop condition:** stop reading when the agent can safely write its artifact, implement the brief, or issue a verdict with evidence. Do not read for comfort or "just in case."
-
-The earlier the phase, the more acceptable broad discovery is. The later the phase, the more reads should be targeted unless a named risk or artifact gap justifies widening.
-
-## Role Quality Gates
-
-- `codebase-explorer` is done only when the planner can locate the affected files, symbols, patterns, tests, contracts, risks, and unknowns without rediscovery.
-- `integration-researcher` is done only when the needed external contract is verified or honestly labeled: auth, calls/selectors, shapes, errors, rate/pagination, setup, and risks.
-- `implementation-planner` is done only when the design is expert, maintainable, right-sized, task briefs are precise enough for implementers to work without the full plan, and every downstream work unit has an efficient evidence-based model/reasoning profile.
-- `task-implementer-bdd` is done only when acceptance criteria are proven, edge/error cases in scope are handled, tests are meaningful, and the report is complete.
-- `root-cause-debugger` is done only when the mechanism is evidenced, plausible alternatives are ruled out, and the fix direction is symbol-addressed.
-- `implementation-reviewer` is done only when the verdict follows from evidence, relevant verification ran or limits are explicit, and required changes are actionable.
-
-## Subagent Roster
-
-| Agent (`subagent_type`) | Use it to | Writes |
-|---|---|---|
-| `codebase-explorer` | Front-load repo discovery and produce `context-map.md` | context-map only |
-| `integration-researcher` | Verify external API/SDK/library/scraping contracts | Integration Recipe only |
-| `implementation-planner` | Design implementation and author the plan bundle | plan bundle only |
-| `root-cause-debugger` | Diagnose a concrete bug to root cause | optional diagnosis artifact; no production code |
-| `task-implementer-bdd` | Implement one task from one brief with BDD/TDD | code + task report |
-| `implementation-reviewer` | Review a task or final implementation from brief/report/diff | review report only |
+- Front-load repository discovery through `codebase-explorer`; downstream roles consume its
+  pointers instead of repeating broad discovery.
+- Address code by symbol and contract. Line numbers are approximate pre-edit hints.
+- Use CodeGraph for structural context and impact when indexed, exact search for text and paths,
+  and targeted reads for known implementation regions. Fall back honestly when the index is absent.
+- Diffs replace repeated discovery, not verification.
+- Downstream agents may widen reads only for a named correctness risk and must record why.
 
 ## Triage
 
 | Request | Lane |
 |---|---|
-| Trivial edit/question | Direct. No pipeline. |
-| Pure codebase question | One `codebase-explorer` if needed. |
-| Single cohesive change, bounded scope | Quick. |
-| New feature / non-trivial change | Plan -> Implement -> Review. |
-| User-reported bug | Debug -> Quick, or Debug -> Plan -> Implement -> Review if broad. |
+| Trivial factual/conceptual question | Direct |
+| Pure codebase question | Direct, or one focused `codebase-explorer` |
+| One cohesive bounded code change, including a tiny edit | Quick |
+| Non-trivial feature, broad refactor, or cross-cutting change | Plan -> Implement -> Review |
+| Concrete user-reported bug | Debug -> Quick, or Debug -> Plan -> Implement -> Review |
 
-Use the lightest lane that preserves quality. The biggest token win is not running a heavier lane than the work needs.
+Direct means answer or analyze without changing production files. While this skill is active, every
+production-code edit, including a tiny one, goes through `task-implementer-bdd`; the parent never
+edits production code.
 
 ## Lane: Quick
 
-For one cohesive change whose scope is bounded and knowable without a plan bundle. **Entry criteria (all must hold):** one cohesive task; the touch set is confidently known or discoverable with at most one focused `codebase-explorer` pass; no new public contracts, migrations, security surface, or cross-task interfaces; roughly <=3 files expected.
+Use Quick only when all are true: one cohesive task; touch set known or discoverable by one focused
+explorer pass; no new public contract, migration, security boundary, or cross-task interface; and
+roughly three or fewer files expected.
 
-Mechanics:
+1. Create `plans/quick-<slug>/brief.md` using the planner's task-brief schema. This is a handoff of
+   requirements, pointers, constraints, tests, and risks, not a parent-authored technical design.
+2. Run one focused explorer first only when the touch set is not confidently known.
+3. Capture baseline and dirty-worktree metadata.
+4. Spawn one `task-implementer-bdd` with brief and report paths.
+5. Read its report and run the named verification yourself after it returns.
+6. Use task review only for a public/shared contract, security, data, migration, concurrency,
+   critical UI, `DONE_WITH_CONCERNS`, or an explicit user request.
+7. Track owner and state in a short `progress.md` when more than one dispatch occurs.
 
-1. Create `plans/quick-<slug>/brief.md` using the standard task-brief schema. No planner exists here, so the orchestrator owns routing: apply the Model Guidance selection method and write the compact routing record into the brief's Implementation Execution Profile — agent, model, reasoning effort, intelligence score, evidence-based rationale, escalation triggers. Report path: `plans/quick-<slug>/report.md`. The brief is a handoff, not a design: capture requirements, pointers, and tests; the implementer owns design within it. Run one focused explorer pass first only if the touch set is not already known.
-2. Capture the baseline SHA (`git rev-parse HEAD`) into the brief, then dispatch one `task-implementer-bdd` through the normal backend selection, record the backend/owner, and apply the standard passive wait.
-3. Verification: the implementer's BDD/TDD evidence plus the orchestrator running the brief's named checks. Task review only per the standard triggers (public/shared contract, security/data/migrations/concurrency/critical UI, `DONE_WITH_CONCERNS`, user request), with an independently selected reviewer profile; otherwise skip it.
-4. Remediation follows the normal agent-affinity protocol with the recorded owner.
-
-**Upgrade rule:** a `PACK_GAP`, scope growth beyond the entry criteria, or a second correction round means the lane was wrong — stop, run the Plan lane, and seed the bundle with the quick brief and report. The Quick lane removes bundle/planner overhead only; it never lowers the testing, honesty, or review bar.
+A `PACK_GAP`, growth beyond Quick criteria, or a second correction round means the lane was wrong.
+Stop and promote to Plan, seeding it with the quick brief and report. Quick removes planning
+overhead, never the quality bar.
 
 ## Lane: Plan -> Implement -> Review
 
-### 1. Map Codebase
+### 1. Map Reality
 
-Dispatch one or more `codebase-explorer` agents when scope is not already obvious. Each `codebase-explorer` gets a focused mandate and writes a `context-map.md` or named section in the bundle.
+Spawn one or more focused `codebase-explorer` owners when scope is not already proven. Each writes
+a context map with CodeGraph status, files/symbols/contracts, read hints, patterns, tests, named
+risks, and unresolved unknowns. Split only genuinely independent areas.
 
-Ask for:
-- codegraph status
-- relevant files and symbols with signatures/contracts
-- read-hints (`codegraph_node` / `codegraph_context` preferred; `path:~line` fallback)
-- existing patterns/utilities/tests to reuse
-- risks that justify later widening
-- explicit unknowns
+### 2. Verify External Contracts
 
-The `codebase-explorer` returns the file path plus a short synthesis. It does not dump code in chat.
+When correctness depends on a current external API, SDK, library, CLI, cloud service, or scraping
+surface not already proven by the repository, spawn `integration-researcher`. Skip it when a working
+repository pattern fully settles the contract.
 
-After dispatching `codebase-explorer`, apply the selected backend's terminal-wait contract and remain suspended until it returns. Do not inspect files, run searches, build your own map, or use short observation loops while it is running.
+### 3. Author The Bundle
 
-### 1b. External Integration Research
+Spawn `implementation-planner` with user requirements, context-map paths, Integration Recipe paths,
+settled product decisions, and the exact bundle path. Do not give it your own architecture or task
+decomposition. It owns design and dispatch-ready briefs.
 
-When the work depends on an external API, SDK, library surface, or scraping target that is not already proven in the repo, dispatch `integration-researcher`. Its Integration Recipe is the verified external contract for planner, implementer, and reviewer. For plan-bound work, place it inside the plan bundle as `plans/<slug>/integration-<dep>.md`; use a standalone recipe only when no bundle exists yet.
+Verify `plan.md`, `global-constraints.md`, every brief, and `progress.md` exist and are complete.
+Reactivate the same planner for missing sections or a source-artifact gap.
 
-Skip this when the repo already has a working pattern and `codebase-explorer` points to it.
+### 4. Approval Gate
 
-After dispatching `integration-researcher`, wait for the recipe/questions. Do not research the integration yourself in parallel.
+Summarize design, task waves, user-visible behavior, major risks, and verification. Unless the user
+already gave explicit standing approval to implement without another stop, ask them to approve or
+adjust the plan in the current main thread. Silence is never approval. Do not spawn implementers
+before approval.
 
-### 2. Plan Bundle
+### 5. Implement Briefs
 
-Dispatch `implementation-planner` with:
-- user requirements
-- `context-map.md` path(s)
-- Integration Recipe path(s), if any
-- any product decisions already settled
-- the approved intelligence scale from Model Guidance if it is not already visible to the planner
+Capture baseline and dirty-worktree metadata before wave 1. For each task spawn
+`task-implementer-bdd` with bundle, brief, report, baseline, and at most one sentence of scene
+setting. Do not paste the brief.
 
-Do not give the planner a proposed plan, task breakdown, architecture, or implementation strategy invented by the orchestrator. Give the planner all load-bearing inputs and constraints, then let the planner author the design and dispatch-ready task briefs.
+After each return, record status, owner target, role profile, report, changed files/symbols,
+observed tests, and concerns in `progress.md`. Repair gaps through their source owner before
+reactivating the implementer.
 
-The planner writes `plans/<slug>/` with `plan.md`, `global-constraints.md`, `task-<id>-brief.md` files, and initialized `progress.md`. It may refine or add to `context-map.md`, but it should not make implementers read the whole map when a task brief can carry the needed subset.
+### 6. Task Review
 
-Each task brief must include:
-- the delegated-specialist boundary: execute the brief directly, do not invoke `orchestrator`, and do not spawn subagents
-- an implementation execution profile: agent, model, reasoning effort, intelligence score, task-specific rationale, and escalation triggers
-- goal and acceptance criteria
-- touch / do-not-touch boundaries
-- exact files/symbols/contracts and read-hints
-- consumed and produced interfaces
-- constraints copied from `global-constraints.md` that bind this task
-- relevant conventions/patterns already digested
-- tests to add/run and expected verification
-- named risks that permit extra reads
-- whether a task review is required and why; when required, its independently selected reviewer profile and rationale; omit task review by default when final review is enough
+Task review is exceptional. Use it when it prevents downstream waste or materially reduces risk: a
+task gates dependent work, changes a public/shared contract, touches security/data/migrations/
+concurrency/critical UI, reports concerns, or the user requests it. Otherwise record
+`skipped-not-needed` and rely on final review.
 
-`plan.md` must include a compact routing matrix covering every task plus the final review. The task briefs are authoritative for task-local routing; `plan.md` is the cross-plan view. The planner chooses the lowest-intelligence approved profile that safely clears each work unit's real demands, not one blanket profile for a wave or role.
+Spawn `implementation-reviewer` in Task mode with brief, report, baseline/diff instructions,
+changed files/symbols, named risks, and output path.
 
-After dispatching `implementation-planner`, wait for the plan bundle or questions. Do not read code or design a backup plan while it is running.
+### 7. Final Review
 
-### 3. Approval Gate
+After every task is complete, always spawn `implementation-reviewer` in Final mode with plan,
+constraints, progress, all reports, baseline, pre-existing changes, and
+`plans/<slug>/final-review.md`. It verifies integrated behavior, broader checks, and changed public
+contract impact without reviewing unrelated dirty-worktree changes.
 
-Before implementation, read `plan.md` and `global-constraints.md`, summarize the design, task waves, and routing choices, and get explicit user approval. Do not dispatch implementers before approval.
+### 8. Remediation
 
-### 4. Implement From Briefs
+Work from stable review IDs:
 
-Before the first write dispatch of the workflow, capture `git rev-parse HEAD` and record it as `Baseline:` in `progress.md`. Reviews and scope checks pin to this SHA.
+1. Classify each as `same-task`, `cross-task`, or `changed-contract`.
+2. Use `followup_task` on the original implementer target for same-task findings. Point it to the
+   brief, report, review, and exact IDs; require tests and an appended remediation round.
+3. Use `followup_task` on the original reviewer target for those IDs only. It updates the same
+   review artifact without renumbering.
+4. Use `followup_task` on the original planner for cross-task or changed-contract findings so it
+   amends the affected source artifacts and briefs. A small isolated fix outside a plan may use a
+   Quick-style fix brief.
+5. Replace a stale owner only from complete artifacts and record the ownership change.
+6. Cap remediation at three rounds. Then report the concrete blocker and ask the user.
 
-For each task, dispatch `task-implementer-bdd` with:
-- the exact model and reasoning effort from the brief's implementation execution profile
-- bundle path
-- brief path
-- report path
-- baseline SHA if git is available
-- one sentence of scene-setting only if the brief lacks it
+## Lane: Debug
 
-Select the backend using the rules above. With `native-collab`, pass the brief's agent/model/effort explicitly. If those fields are unavailable or rejected, run `scripts/invoke-specialist.ps1 -Agent task-implementer-bdd -Model <model> -ReasoningEffort <effort> -Workspace <project-root> -Prompt <path-based-dispatch>`, record its `job_id`, and immediately enter the single-call passive wrapper from `references/codex-exec-passive-wait.md`. Capture the returned `session_id` after completion.
+1. Spawn `root-cause-debugger` with observed symptoms, reproduction, logs, failing commands, and
+   hypotheses explicitly labelled as hypotheses. Supply a diagnosis path for broad/plan-bound bugs.
+2. If status is `BLOCKED` or confidence is below high, spawn exactly one fresh independent second
+   `root-cause-debugger`. Give it reproduction and the first Hypotheses Handoff as claims to confirm,
+   refute, or replace. Write `second-diagnosis-<id>.md`.
+3. Reconcile before implementation. Agreement permits the fix lane. On disagreement, reactivate the
+   first debugger with `followup_task` to test the contested mechanism against the second's
+   evidence. Unresolved material disagreement requires user input.
+4. Use Quick for a localized fix and Plan for a broad one. If an external contract changed,
+   research it before planning or fixing.
 
-Immediately record the implementer backend, canonical target or provisional `codex-job:<job-id>`, job lifecycle `active/retained`, follow-up mechanism, and actual profile in `progress.md`. Replace the provisional owner with `codex-exec:<session-id>` when `-Wait` returns it, update the job's terminal state, and retain the job ID as execution evidence until the workflow-close gate. Keep that owner through review and remediation; do not identify it later from memory.
+## Gaps And User Decisions
 
-Do not paste the full brief unless the environment cannot read files. Do not paste prior task reports into later dispatches. If a later task needs a prior output, put that interface in its brief or add one concise decision to the prompt.
+Specialists may return `PACK_GAP`, `NEEDS_CONTEXT`, `BLOCKED`, or numbered questions. Answer from
+settled artifacts when possible. Ask the user only for product decisions, credentials, approval,
+authority, or external facts that cannot be derived.
 
-Parallelize only disjoint file scopes **and** disjoint contracts. Tasks that share files, DTOs/schemas, public interfaces, shared mutable state, migrations, critical UX flows, or ordering assumptions run sequentially. No git worktrees unless the user explicitly asks.
+Repair gaps at their source, using the original owner:
 
-When a task finishes, update `progress.md` with status, report path, changed files/symbols, test summary, and any concerns.
+- repository pointer, test, or pattern -> context map;
+- global invariant -> `global-constraints.md`;
+- external contract -> Integration Recipe;
+- task scope, interface, or acceptance test -> task brief.
 
-Do not silently change a selected profile. If new evidence, a pack gap, or changed scope invalidates planner-owned routing, send the planner the new facts and have it amend `plan.md` and the brief before re-dispatch. If no plan covers the work unit, re-run the same selection method and replace the orchestrator-owned routing record. Record the actual dispatched profile in `progress.md` when a ledger exists.
-
-Before dispatch, verify whether native collaboration can apply the role and both planned values. If it cannot, use the resumable `codex-exec` backend. Return a routing-capability gap only if that backend is also unavailable or rejects the profile. A profile default counts as actual only when it exactly matches the planned pair.
-
-After dispatching an implementer wave, wait for those implementers. Do not inspect their files, run tests, or implement adjacent fixes while they are running.
-
-### 5. Task Review
-
-Task review is not the default. Use it only when it materially improves quality or prevents downstream waste: a task gates dependent work, changes a public/shared contract, touches security/data/migrations/concurrency/critical UI, has `DONE_WITH_CONCERNS`, or the user explicitly asked for a task-level gate. Otherwise mark review as `skipped-not-needed` in `progress.md` and rely on final review.
-
-When task review is needed, dispatch `implementation-reviewer` with:
-- the exact model and reasoning effort from the brief's task-review profile
-- review mode: `task`
-- brief path
-- report path
-- baseline/head or current diff instructions
-- changed files/symbols from the report
-- review output path
-
-Immediately record the reviewer backend, canonical target or provisional `codex-job:<job-id>`, job lifecycle `active/retained`, follow-up mechanism, and actual profile in `progress.md`. Replace the provisional owner with `codex-exec:<session-id>` and update the job's terminal state after the blocking wait completes; retain its job ID until the workflow-close gate.
-
-If no clean task diff exists because commits are not being used, the reviewer still starts from the report's file/symbol list and `git diff <baseline> -- <reported files>` when git is available. It may read outside that set only for a named risk.
-
-After dispatching a reviewer, wait for the verdict. Do not run a parallel review yourself unless the reviewer returns blocked/stale and you explicitly choose a new coordination path.
-
-If the reviewer returns required changes:
-
-1. Classify each stable finding ID as same-task, cross-task, or changed-contract/requirement. Do not treat the reviewer's suggested location as automatic ownership.
-2. For same-task findings within the original brief, resume the recorded owner through its recorded backend. Point to the brief, task report, review path, and finding IDs; ask the implementer to update code, tests, and the existing report's remediation history. Do not paste the findings or start a fresh agent/session.
-3. Wait for that implementer's terminal result. While it runs, preserve the normal coordinator-only discipline.
-4. Resume the recorded reviewer through its backend to re-check the addressed IDs against the new report/diff and update the same review file. Wait for the new verdict.
-5. If a native target cannot be resumed, use `list_agents` to confirm. If a `codex-exec` session cannot be resumed, preserve the CLI error as evidence. Only then dispatch a replacement from the artifact set and record the ownership change.
-
-If remediation changes scope, contracts, risk, or required capability, do not force it through the old agent merely to save context. Repair planner-owned artifacts or create a newly routed unplanned work unit first.
-
-### 6. Final Review
-
-After all tasks are complete, dispatch `implementation-reviewer` in `final` mode with:
-- the exact final-review model and reasoning effort selected in `plan.md`
-- `plan.md`
-- `global-constraints.md`
-- `progress.md`
-- all task report paths
-- baseline SHA for the full change, if available
-- review output path: `plans/<slug>/final-review.md`
-
-Final review checks integration across tasks, runs relevant broader tests/Playwright where applicable, and uses `codegraph_impact` for changed public contracts. It is broader than task review but still starts from artifacts and diff, not from scratch.
-
-For required changes from final review, map each finding ID to the owning task/implementer recorded in `progress.md`. Same-task findings go back to that original implementer through its recorded backend; cross-task or changed-contract findings go through fix-task triage. After remediation, resume the same final reviewer through its recorded backend to update `final-review.md` and the verdict.
-
-After the final verdict, check the Second Opinions criteria below and dispatch the adversarial second review when they are met.
-
-### 7. Fix Loop
-
-Apply the agent-affinity protocol first: same-task findings return to the original implementer and then the original reviewer through their recorded backends. For cross-task, out-of-scope, or changed-contract findings already covered by a plan, have `implementation-planner` create or amend scoped fix briefs and select their implementation/review profiles. Without a covering plan, the orchestrator creates a compact execution contract and owns routing directly; do not add a planner only for model selection. Prefer one owner per cohesive fix batch. Cap repeated loops at 2-3 rounds before escalating. Second-opinion findings enter this loop as ordinary required changes under the same shared cap.
-
-## Second Opinions
-
-Both paths below are orchestrator-owned unplanned work units: select their profiles with the Model Guidance selection method, record the routing decision, and preserve their output verbatim. Confirmed findings enter the normal fix loop under the shared 2-3 round cap; a second opinion never buys extra rounds.
-
-### Adversarial Second Review
-
-After a final-review verdict, check: security, data/migrations, concurrency, public contracts, or critical UX in scope; a contested or limitation-laden verdict; a reviewer `RECOMMENDATION: SECOND_OPINION`; or an explicit user request. If met (cap: one per final-review round), dispatch a second, independent `implementation-reviewer` — never the recorded final reviewer — at a profile of equal or higher rank than the final reviewer's (`gpt-5.6-terra`/`max` when the floor is unassessable), read-only, with the plan, constraints, baseline SHA, and the final review path, mandated to confirm or refute the existing findings and hunt real additional defects only (no restyling, no invented requirements). It writes `plans/<slug>/second-review-final.md`.
-
-Reconcile: the recorded final reviewer owns the verdict; the second review is evidence, never a verdict. Never drop a second-opinion finding silently. Evidence-confirmed findings enter the fix loop as ordinary required changes; a contested material finding triggers a targeted re-check by the recorded final reviewer ("confirm or refute finding X with evidence"); a still-contested material risk (security/data) is surfaced to the user with both positions.
-
-### Second Diagnosis
-
-When `root-cause-debugger` returns `BLOCKED` or Confidence below high, automatically dispatch a second, independent `root-cause-debugger` at a stronger profile than the first attempt, read-only, with the symptoms/repro and the first debugger's Hypotheses Handoff framed strictly as hypotheses and partial evidence to confirm, refute, or replace. It writes its structured diagnosis to `plans/<slug>/second-diagnosis-<id>.md` (cap: one per bug).
-
-Reconcile before choosing the fix path: agreement -> proceed on the confirmed diagnosis; disagreement -> resume the recorded first debugger to re-check the contested mechanism against the second's evidence; unresolved material disagreement -> Stop and Ask.
-
-## Lane: Debug -> Implement / Plan
-
-1. Dispatch `root-cause-debugger` with symptoms, repro, logs, and any failing command. Provide observed facts and hypotheses only as hypotheses; do not pre-diagnose the root cause for the debugger. Provide `plans/<slug>/debug-diagnosis.md` only when the diagnosis is complex, broad, or will feed a plan; localized fixes may use the debugger's structured response directly.
-2. If the debugger returns `BLOCKED` or Confidence below high, run the Second Diagnosis path in Second Opinions and reconcile before choosing the fix path.
-3. If localized, run the Quick lane: the brief carries the debugger's Root Cause, Location, Mechanism, and Fix Direction, and the orchestrator selects and records the implementer profile. Do not add a planner solely for this transition. A genuinely trivial fix may instead switch explicitly to the Direct lane.
-4. If broad, run the Plan lane.
-5. If an external contract changed, run `integration-researcher` before planning or fixing.
-
-After dispatching `root-cause-debugger`, wait for the diagnosis. Do not investigate the same bug yourself during wait windows.
-
-## Stop and Ask
-
-Subagents may return:
-- `PACK_GAP`: the artifact lacks a required file/symbol/contract/convention
-- `NEEDS_CONTEXT`: product/requirement context is missing
-- `BLOCKED`: cannot proceed safely
-- numbered questions
-
-Answer from artifacts if possible. Ask the user only for product decisions, credentials, or external facts that cannot be derived.
-
-For `PACK_GAP`, repair the owner artifact rather than improvising in chat:
-- missing repo pointer/pattern/test -> update `context-map.md` or ask `codebase-explorer` to patch it;
-- missing global invariant -> update `global-constraints.md`;
-- missing external contract -> update/create `integration-<dep>.md`;
-- missing task-local scope/interface/test -> update the task brief.
-
-Then resume or re-dispatch with the same artifact paths. Do not paste a long replacement context into the agent prompt.
+Do not paste a long replacement context into chat.
 
 ## Final Synthesis
 
-The final user response must come from artifacts, not memory: `progress.md`, task reports, task reviews if any, and final review. Summarize what changed, verification, known limitations, and next actions. Do not paste artifact contents unless the user asks. Leave retained terminal jobs untouched until the user explicitly confirms workflow closure; if confirmation is already present in the user's request, perform the cleanup gate before reporting completion.
+Build the final response from `progress.md`, task reports, task reviews where used, and
+`final-review.md`, not from memory. State what changed, what commands were actually run and their
+observed results, limitations, unresolved concerns, actual owners/profiles, and the natural next
+action. Do not claim runtime behavior that was not observed and do not paste artifacts unless asked.
 
-## Model Guidance
-
-Always set both the model and reasoning effort explicitly. Omitted values can inherit unsuitable defaults.
-
-- `implementation-planner`: always dispatch with `gpt-5.6-sol` and `xhigh` reasoning. This is the only fixed profile; the planner does not choose its own profile.
-- Every other current or future agent dispatch must be selected independently from the scale below. This includes `codebase-explorer`, `integration-researcher`, `root-cause-debugger`, `task-implementer-bdd`, `implementation-reviewer`, direct agent-to-agent transitions, fix/recovery work, and unforeseen lanes.
-- If a planner artifact covers the work unit, `implementation-planner` owns routing and records it in the plan/brief. Otherwise the orchestrator owns routing at dispatch time. Never insert a planner solely to choose a model.
-- For an orchestrator-owned selection, put a compact routing record in the dispatch prompt: agent, model, reasoning effort, intelligence score, evidence-based rationale, and escalation triggers. Record it in an existing ledger too when one exists.
-- Dispatch the exact selected profile. If later evidence changes complexity, risk, or scope, have the original routing owner re-evaluate: planner amendment for planned work, replacement dispatch record for unplanned work.
-- Apply the pair with `native-collab` when its schema supports explicit role/model/effort; otherwise start a persistent `scripts/invoke-specialist.ps1` job, block with `-Wait`, and retain its resumable thread UUID. Stop with a routing-capability gap only when neither backend works. Never record a selected pair as actual when the runtime used a fallback.
-
-Use this approved scale (intelligence = capability score; cost = approx. USD per task):
-
-| Model / reasoning effort | Intelligence | ~$/task | Quality/price verdict |
-|---|---:|---:|---|
-| `gpt-5.6-sol` / `max` | 58.89 | 1.037 | frontier — absolute ceiling; ~$0.29 per marginal point |
-| `gpt-5.6-sol` / `xhigh` | 57.65 | 0.682 | frontier |
-| `gpt-5.6-sol` / `high` | 55.87 | 0.453 | frontier — best high-end value; unassessable-floor default |
-| `gpt-5.6-terra` / `max` | 54.95 | 0.554 | dominated by sol/high (smarter and cheaper) — never select |
-| `gpt-5.6-sol` / `medium` | 53.59 | 0.314 | frontier |
-| `gpt-5.6-terra` / `xhigh` | 51.60 | 0.327 | dominated by sol/medium — never select |
-| `gpt-5.6-luna` / `max` | 51.24 | 0.209 | frontier |
-| `gpt-5.6-sol` / `low` | 49.44 | 0.197 | avoid — luna/max gives +1.8 points for +$0.012 |
-| `gpt-5.6-luna` / `xhigh` | 49.07 | 0.139 | frontier — strong value |
-| `gpt-5.6-terra` / `high` | 48.95 | 0.236 | dominated by luna/xhigh (equal intelligence, 1.7x price) — never select |
-| `gpt-5.6-luna` / `high` | 46.06 | 0.095 | frontier — best quality/price knee |
-| `gpt-5.6-terra` / `medium` | 45.57 | 0.128 | dominated by luna/high — never select |
-| `gpt-5.6-terra` / `low` | 40.47 | 0.101 | dominated by luna/high (same price, +5.6 points) — never select |
-| `gpt-5.6-luna` / `medium` | 38.05 | 0.050 | frontier |
-| `gpt-5.6-luna` / `low` | 33.26 | 0.040 | frontier — cheapest |
-
-**Efficient ladder** — the only selectable rungs; every Terra pair and sol/low is beaten on both axes (or within noise for >40% more cost) by a rung here:
-
-`luna/low` -> `luna/medium` -> `luna/high` -> `luna/xhigh` -> `luna/max` -> `sol/medium` -> `sol/high` -> `sol/xhigh` -> `sol/max`
-
-The marginal cost per intelligence point roughly doubles at each rung ($0.002 -> 0.006 -> 0.015 -> 0.032 -> 0.045 -> 0.061 -> 0.13 -> 0.29): climbing through Luna is cheap; each Sol rung must be bought by a concrete named risk, and sol/max only when the last point genuinely changes the outcome.
-
-### Selection Method
-
-Treat the intelligence number as a capability floor, not a target to maximize:
-
-1. Assess the work unit on scope/coupling, ambiguity/novelty, correctness/blast-radius risk, and verification difficulty.
-2. Take the highest load-bearing demand. Scores are ordinal, not additive: do not average dimensions. Move up when several difficult dimensions interact or when a failure would be hard to detect or reverse.
-3. Choose the lowest efficient-ladder rung that safely clears that demand. This is the efficient choice: never a dominated pair, never excess capability without a task-specific quality reason.
-4. Cost is real data: at a comparable floor take the cheaper rung. Do not invent latency or model-specialization claims.
-5. Record the pair, intelligence score, concise evidence-based rationale, and concrete escalation triggers. Avoid generic rationales such as "complex task."
-
-Use these calibration anchors; select between anchors when the evidence warrants it:
-
-- **33:** mechanical, single-target change with exact pattern, exact tests, negligible ambiguity, and low blast radius.
-- **38-40:** bounded local work with small judgment calls, established patterns, and easy-to-observe failures.
-- **46:** moderate multi-symbol or multi-file work with known architecture, meaningful edge cases, or routine integration reasoning.
-- **49:** complex cross-component behavior, shared contracts, difficult state/error/UI/data reasoning, or substantial verification.
-- **51-54:** very complex or high-risk work with several interacting constraints, broad impact, security/migration/concurrency/public-contract concerns, or incomplete but resolvable evidence.
-- **56-59:** exceptional ambiguity, novelty, blast radius, conflicting evidence, or a critical cross-system verdict; reserve the top rungs for stakes that justify their marginal cost.
-
-Size every work unit independently; never inherit a model merely because the preceding agent used it. A narrow implementation can still need a stronger reviewer when the verdict must integrate several tasks or protect security, data, migrations, concurrency, public contracts, or critical UX. Luna is eligible at every listed effort level; do not treat it as simple-task-only. If the capability floor or task fit cannot be assessed confidently, use `gpt-5.6-sol` with `high` reasoning; escalate to `xhigh`/`max` only when the verdict itself is critical. The planner keeps its fixed `sol`/`xhigh` profile; Sol is not otherwise exclusive. For non-planner specialists, do not select an unranked pair such as Terra `ultra` unless the user supplies a new approved scale.
+Before finishing, ensure every collaboration owner is terminal. No external process or compatibility
+state is created by this workflow.
 
 ## Memory Policy
 
-Do not rely on agent persistent memory for execution correctness. If a remembered fact matters, the planner must copy the current verified fact into `context-map.md`, `global-constraints.md`, or the task brief. Subagents may mention durable learnings in reports, but they should not write or maintain long memory records as part of this workflow.
+Never rely on persistent agent memory for execution correctness. Any remembered fact that affects
+the work must be re-verified and written into its owner artifact. Durable execution state belongs in
+the Markdown bundle, especially `progress.md`.
