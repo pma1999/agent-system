@@ -319,14 +319,16 @@ def cmd_install(args: argparse.Namespace) -> int:
     stamp = _deploy.now()
     refused_total = 0
     for h in harnesses.values():
-        written, refused = _deploy.install_harness(h, args.force, args.dry_run, stamp)
+        force = True if args.force == [] else (set(args.force) if args.force else False)
+        written, refused = _deploy.install_harness(h, force, args.dry_run, stamp)
         sufijo = " (simulacion)" if args.dry_run else ""
         print(f"  {h.name:<9} {written} ficheros desplegados en "
               f"{_deploy.live_dir(h)}{sufijo}")
         if refused:
             refused_total += len(refused)
-            print(f"            {len(refused)} rechazados, sin tocar. Revisalos y, si quieres "
-                  f"que los sustituya lo generado, repite con --force:")
+            print(f"            {len(refused)} rechazados, sin tocar. Revisalos; para sustituir "
+                  f"alguno por lo generado, repite con --force <ruta> (o --force a secas "
+                  f"para todos):")
             for key, motivo in refused:
                 print(f"            ! {key}  ({motivo})")
         retirados = _deploy.clean_obsolete(h, stamp, args.dry_run)
@@ -491,8 +493,9 @@ def main(argv: list[str] | None = None) -> int:
             sp.add_argument("--dry-run", action="store_true",
                             help="muestra lo que haria sin tocar nada")
         if name == "install":
-            sp.add_argument("--force", action="store_true",
-                            help="sobrescribe tambien ficheros que nunca estuvieron gestionados")
+            sp.add_argument("--force", nargs="*", metavar="RUTA", default=None,
+                            help="sobrescribe ficheros no gestionados. Sin argumentos, todos; "
+                                 "con rutas, solo esas (p.ej. --force AGENTS.md)")
             sp.add_argument("--retire-legacy", action="store_true",
                             help="renombra el .git del checkout antiguo de la carpeta viva")
         if name in ("install", "status", "verify", "adopt"):

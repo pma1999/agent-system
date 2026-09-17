@@ -1,99 +1,194 @@
 ---
 name: sync-agent-system
-description: Sync, install or publish the personal multi-agent system - the shared orchestration prompts, specialist agents and skills deployed into ~/.claude, ~/.codex and ~/.config/opencode from the canonical repo at ~/agent-system. Use when the user says to sync, update, install or publish the agent system / agents / orchestrator / skills, after editing any of them so other machines get the change, or when something in those folders looks out of date or edited by hand.
+description: Operate the personal multi-agent system - the orchestration prompts, specialist agents and skills that live in one canonical repo (~/agent-system) and deploy into ~/.claude, ~/.codex and ~/.config/opencode. Use it to pull and apply the latest version onto this machine, publish local changes so other machines get them, check whether this machine is in sync or has drifted, switch the model or effort of a role, migrate a machine that still uses the retired three-branch layout, or set the system up on a new one. Trigger on anything like "sync the agent system", "fetch the latest", "publish what you changed", "is this machine up to date", "install this on the new laptop", "switch opencode to <model>", or after editing any agent, skill or orchestration prompt so the change reaches the other machines - even when the user does not name the repo or the tooling.
 ---
 
-# Sync Agent System
+# Operating the agent system
 
-One canonical repo, `pma1999/agent-system` (branch `main`), cloned at `~/agent-system`, is the
-single source of truth for all three harnesses. The live folders (`~/.claude`, `~/.codex`,
-`~/.config/opencode`) are **deployment targets**, not repos: what lands there is generated from the
-canonical source. Full docs in `~/agent-system/README.md`.
+**You run this, end to end.** The user asks for an outcome ("fetch the latest", "publish that",
+"is this machine current?") and you execute the commands, read the output, and report what actually
+happened. Do not print a command list and hand it back - the point of this skill is that they
+don't have to.
 
-All commands run from the repo:
+The one thing you never do alone is decide what happens to *their* files. Those decision points are
+marked below; when you hit one, stop and ask with the evidence in front of them.
+
+## The shape of the system
+
+`~/agent-system` (branch `main`) is the single source of truth. `~/.claude`, `~/.codex` and
+`~/.config/opencode` are **deployment targets**: what lands there is generated. Editing them
+directly is pointless - the next `install` overwrites it and `verify` reports it as drift.
+
+Everything goes through one tool:
+
+```bash
+cd ~/agent-system && python bin/agentsys.py <comando>
+```
+
+`build` renders, `verify` checks, `install` deploys, `publish` pushes, `status` summarises,
+`adopt` rescues a hand-edit, `models` switches models.
+
+**Under WSL, pass `--home /mnt/c/Users/<usuario>`** to `install`, `verify`, `status` and `adopt`.
+`~` is the Linux home there, but Claude Code and Codex read the Windows one. The tool detects WSL
+and prints the exact flag to use - if you see that warning, you forgot it.
+
+## Start by orienting
+
+Unless the request is obviously a one-liner, run `status` first. It costs nothing and it tells you
+which of the four jobs below you are actually in:
+
+- *no instalado* -> this machine has never had it: **set up** or **migrate**.
+- *N ficheros con deriva* -> someone edited a live folder, or an `install` is pending.
+- *[checkout legacy activo]* -> still on the retired three-branch layout: **migrate**.
+
+## Job 1 - Bring this machine up to date
 
 ```bash
 cd ~/agent-system
-python bin/agentsys.py <comando>
-```
-
-On Windows `pwsh -NoProfile -File "$HOME/agent-system/bin/install.ps1"` is a shim for
-`build` + `verify` + `install`.
-
-## Update this machine
-
-```bash
-git -C ~/agent-system pull --ff-only
-python bin/agentsys.py install      # renderiza y despliega; idempotente
+git pull --ff-only
+python bin/agentsys.py install
 python bin/agentsys.py verify
 ```
 
-`install` backs up every file it replaces under `~/.agent-system-backups/<timestamp>/` and merges
-the config templates additively (`settings.json`, `config.toml`, `opencode.jsonc` and
-`opencode.v2.jsonc`): missing system keys are added, existing values are never overwritten, and
-comments are preserved. A nested key it cannot place is reported as `REVISA A MANO` with its exact
-path rather than silently skipped.
+If `~/agent-system` does not exist, clone it first
+(`git clone https://github.com/pma1999/agent-system.git ~/agent-system`) - that is the normal
+bootstrap, not an error.
 
-## Publish changes made here
+If `git pull --ff-only` refuses because the branches diverged, **do not force anything**. Show them
+what is on each side and ask.
+
+## Job 2 - Publish what was changed here
 
 ```bash
+cd ~/agent-system
 python bin/agentsys.py verify
-python bin/agentsys.py publish -m "<one-line summary of the change>"
+python bin/agentsys.py publish -m "<resumen>"
 ```
 
-`publish` refuses to run when `verify` fails, and stages an explicit file list - it never runs
-`git add -A`, so machine state and synced plugin skills cannot leak into the repo. Write a real
-summary, not a placeholder.
+`publish` refuses to run when `verify` fails, and stages an explicit file list - never `git add -A`
+- so machine state and third-party plugin skills cannot leak into the repo.
 
-## Where a change belongs
+**Write the message yourself, from the actual diff.** Read `git diff --stat` and `git diff` before
+composing it, and say what changed and why in one line. A placeholder like "update" makes the
+history useless for the person on the other machine, who is usually the same person six weeks
+later.
 
-Never edit the live folders: `install` overwrites them and `verify` reports the drift.
+Publishing is outward-facing. If the user said "publish", that is your authorisation. If they only
+said "I changed X", make the change and *offer* to publish.
 
-| What changes | Edit |
+## Job 3 - Change something in the system
+
+Never edit the live folders. Find the right file first:
+
+| What changes | Where it lives |
 |---|---|
 | A specialist's prompt, for all three harnesses | `source/orchestration/agents/<role>.md` |
 | The orchestration operating model | `source/orchestration/skill/SKILL.md` |
 | Something true of only one harness | `source/orchestration/skill/sections/<anchor>.<harness>.md` |
-| A permission, colour, tool name or sandbox | `harness/<harness>/adapter.toml` |
+| A role's model or effort | `agentsys models` (never the adapter by hand) |
+| Permissions, colours, tool names, sandbox | `harness/<h>/adapter.toml` |
 | A skill shared by the three | `source/skills/<skill>/` |
-| A skill of one harness only | `harness/<harness>/files/skills/<skill>/` |
-| `CLAUDE.md`, `AGENTS.md`, templates, patches | `harness/<harness>/files/` |
-| The model or effort of a role | `agentsys models`, never the adapter by hand |
+| A skill of one harness only | `harness/<h>/files/skills/<skill>/` |
+| `CLAUDE.md`, `AGENTS.md`, templates, patches | `harness/<h>/files/` |
 
-After any edit: `build`, then `verify`, then `install`.
+Then always: `build` -> `verify` -> `install`. And offer to publish.
 
-## Handling output
+The rule that keeps the three harnesses identical: if the text would read the same in all three,
+it belongs in the canonical body. If you find yourself wanting a per-harness `if` inside that body,
+it is a token or a section instead. `verify` proves this on every run, so a mistake here shows up
+immediately rather than six months later.
 
-- `verify` prints four blocks. Report which failed, verbatim.
-  - *Render determinista* failing means someone edited `rendered/`; re-run `build`.
-  - *Identidad de prompts* failing means the three harnesses no longer share one body: the diff it
-    prints says exactly where. Fix the canonical source, never one harness.
-  - *Deriva* means the live folders do not match; run `install`.
-- `install` reporting **rechazados** means those files exist, differ, and were never managed by
-  this system. Show the list and ask whether to keep them (copy them aside) or overwrite with
-  `--force`. Do not choose silently.
-- `adopt` pulls a hand-made change in a live folder back into the canonical source. It refuses for
-  generated files and tells you which canonical file to edit instead.
-- `models list` shows the model profiles of the three harnesses and marks the one in effect.
-  `models apply <name> --harness <h>` switches the whole roster; `models set --harness <h>
-  --model <m> [--effort <e>] [--role <r>]` changes one value. Both rewrite the canonical adapter
-  and re-render, so `install` still has to run afterwards. On OpenCode, `--scope omo` or `both`
-  also touches `oh-my-opencode-slim.json`, which is another agent system and machine-local: the
-  default is `ours` and never touches it.
-- `status` gives the short version: what is managed, what drifted, whether a legacy checkout is
-  still active in a live folder.
+### Switching models
 
-## Install on a new machine
+```bash
+python bin/agentsys.py models list                                  # * marca el perfil vigente
+python bin/agentsys.py models apply <perfil> --harness <h>
+python bin/agentsys.py models set --harness <h> --model <m> [--effort <e>] [--role <r>]
+python bin/agentsys.py models save <nombre> --harness <h>
+```
+
+Both `apply` and `set` rewrite the canonical adapter and re-render, so `install` still has to run
+afterwards. OpenCode has many profiles because it changes often; Claude and Codex start with one.
+
+On OpenCode only, `--scope` picks what gets touched: `ours` (default) is the orchestrator roster,
+`omo` is the active preset of `oh-my-opencode-slim.json`, `both` is the two. OMO is a *different*
+agent system and its config is local to each machine, so never widen the scope without being asked.
+
+## Job 4 - Migrate a machine from the old three-branch layout
+
+A machine where `status` shows `[checkout legacy activo]`, or where `~/.claude` is still a git
+checkout of `master`. Its `~/.claude/install.ps1` is the retired installer; running it reinstalls
+the old system from frozen branches.
 
 ```bash
 git clone https://github.com/pma1999/agent-system.git ~/agent-system
-cd ~/agent-system && python bin/agentsys.py install
+cd ~/agent-system
+python bin/agentsys.py install --dry-run
 ```
 
-Then: open `claude` once so it installs the plugins from `settings.json`; run `/repatch-codex` if
-the installer left the Codex plugin patch pending; `codex login` for the Codex side. For OpenCode
-inside WSL, link the Windows folders once - see `docs/INSTALACION.md`.
+**Stop here and put the dry run in front of the user.** It touches nothing, and the *rechazados*
+are the whole point of running it:
 
-Machine state (credentials, sessions, history, the real `settings.json` / `config.toml` /
-`opencode.jsonc` values, plugin caches, plugin skills synced from claude.ai) is never part of the
-repo.
+- `cambio local sin publicar` - work this machine never pushed. Show them the diff
+  (`git -C ~/.claude diff -- <fichero>`) and ask. This is the only thing the migration can lose
+  sight of.
+- `nunca estuvo gestionado` - a file of theirs the system did not put there. Same rule.
+
+Once they have decided:
+
+```bash
+python bin/agentsys.py install                          # respeta todos los rechazados
+python bin/agentsys.py install --force ruta/aprobada    # solo los que autorizaron
+python bin/agentsys.py install --retire-legacy
+python bin/agentsys.py verify
+```
+
+`--retire-legacy` renames each live folder's `.git` to `.git.legacy-agent-system-<fecha>`; nothing
+is deleted and renaming it back reverts it. Machine state survives: the config templates merge
+additively and never overwrite an existing value.
+
+Afterwards tell them the manual bits: open `claude` once so it installs the plugins from
+`settings.json`, run `/repatch-codex` if the Codex plugin patch was left pending, and `codex login`
+for the Codex side.
+
+## Reading the output
+
+`verify` prints four blocks. Report which one failed, verbatim - each means something different:
+
+- **Render determinista** - someone edited `rendered/` by hand. Re-run `build`; if the edit was
+  intentional, move it to the canonical source first.
+- **Identidad de prompts** - the three harnesses no longer share one body. The diff it prints says
+  exactly where. Fix it in `source/orchestration/`, never in one harness.
+- **Envoltorio: esquema y roster** - a model alias, effort, colour or roster entry a harness would
+  silently ignore. These fail quietly at runtime, which is why the check exists.
+- **Deriva** - the live folders do not match `rendered/`. Run `install`.
+
+`install` reporting **rechazados** or **REVISA A MANO** is not a failure - it is the tool refusing
+to guess. Both need the user.
+
+## When to stop and ask
+
+Everything else you handle yourself. These four are theirs:
+
+1. **Rechazados.** Their file, differing from what we would write. Show the list with reasons, and
+   the diff for anything marked `cambio local sin publicar`. Never reach for `--force` on your own.
+   When they approve some but not others, pass the approved paths: `--force AGENTS.md`. Bare
+   `--force` overwrites every rejected file, so use it only when they said yes to all of them.
+2. **`REVISA A MANO`.** System keys missing inside a config block they already had. The merge will
+   not insert them without destroying their comments. Give them the exact paths. The one that
+   matters most is `permission.skill.orchestrator: "deny"` on OpenCode - without it the Claude
+   `orchestrator` skill, visible there through the `~/.claude/skills` symlink, gets advertised in
+   the wrong runtime.
+3. **Divergencia en git.** Show both sides; never force-push or hard-reset.
+4. **Anything that would discard their work.** Backups exist - every replaced file is under
+   `~/.agent-system-backups/<fecha>/` - but a backup is a recovery path, not permission.
+
+## What is not in the repo
+
+Credentials, sessions, history, transcripts, plugin caches, the real `settings.json` /
+`config.toml` / `opencode.jsonc` / `opencode.v2.jsonc` values, and the plugin skills synced from
+claude.ai under `skills/synced/`. If someone asks why a machine-specific setting did not travel:
+that is deliberate, and the templates are how a new machine gets the *system* keys without losing
+its own.
+
+Full reference: `~/agent-system/README.md`, and `docs/INSTALACION.md` for migration and WSL.

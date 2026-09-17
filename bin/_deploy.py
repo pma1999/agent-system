@@ -106,7 +106,7 @@ def norm(rel: Path) -> str:
     return str(rel).replace("\\", "/")
 
 
-def install_harness(h: Harness, force: bool, dry: bool, stamp: str) -> tuple[int, list[str]]:
+def install_harness(h: Harness, force, dry: bool, stamp: str) -> tuple[int, list[str]]:
     live = live_dir(h)
     base = RENDERED / h.name
     live.mkdir(parents=True, exist_ok=True)
@@ -121,7 +121,11 @@ def install_harness(h: Harness, force: bool, dry: bool, stamp: str) -> tuple[int
         if dst.exists():
             if dst.read_bytes() == src.read_bytes():
                 continue
-            if key not in owned and not force:
+            # `force` es True (todo) o una lista de rutas concretas. Lo segundo
+            # existe porque lo natural al revisar los rechazados es aprobar unos
+            # si y otros no; un flag global obligaria a pisarlos todos.
+            forzado = force is True or (isinstance(force, (list, set, tuple)) and key in force)
+            if key not in owned and not forzado:
                 motivo = ("cambio local sin publicar" if key in sucios
                           else "nunca estuvo gestionado")
                 refused.append((key, motivo))
