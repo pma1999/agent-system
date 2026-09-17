@@ -166,6 +166,18 @@ def _fill_missing(target: dict, template: dict) -> int:
     return changed
 
 
+def missing_paths(target: dict, template: dict, prefix: str = "") -> list[str]:
+    """Claves de la plantilla ausentes en el destino, a cualquier profundidad."""
+    out: list[str] = []
+    for k, v in template.items():
+        path = f"{prefix}{k}"
+        if k not in target:
+            out.append(path)
+        elif isinstance(v, dict) and isinstance(target[k], dict):
+            out += missing_paths(target[k], v, path + ".")
+    return out
+
+
 def merge_json(target: Path, template: Path, dry: bool) -> int:
     if not template.exists():
         return 0
@@ -211,6 +223,24 @@ def merge_jsonc(target: Path, template: Path, dry: bool) -> int:
     return changed
 
 
+def jsonc_unplaced(target: Path, template: Path) -> list[str]:
+    """Claves anidadas que la insercion textual no puede colocar sin perder los
+    comentarios del fichero del usuario. Se reportan para decidirlas a mano."""
+    if not target.exists() or not template.exists():
+        return []
+    tpl = json.loads(_strip_jsonc(template.read_text(encoding="utf-8")))
+    cur = json.loads(_strip_jsonc(target.read_text(encoding="utf-8")))
+    return [q for q in missing_paths(cur, tpl) if "." in q]
+
+
+def toml_unplaced(target: Path, template: Path) -> list[str]:
+    if not target.exists() or not template.exists():
+        return []
+    tpl = _tomllib.loads(template.read_text(encoding="utf-8"))
+    cur = _tomllib.loads(target.read_text(encoding="utf-8"))
+    return [p for p in missing_paths(cur, tpl) if "." in p]
+
+
 def merge_toml(target: Path, template: Path, dry: bool) -> int:
     """Insercion textual: claves de nivel superior primero, tablas ausentes al final."""
     if not template.exists():
@@ -244,20 +274,24 @@ def merge_toml(target: Path, template: Path, dry: bool) -> int:
 
 
 TEMPLATE_MERGES = {
-    "claude":   [("templates/settings.json", "settings.json", merge_json)],
-    "codex":    [("templates/config.toml", "config.toml", merge_toml)],
-    "opencode": [("templates/opencode.jsonc", "opencode.jsonc", merge_jsonc)],
+    "claude":   [("templates/settings.json", "settings.json", merge_json, None)],
+    "codex":    [("templates/config.toml", "config.toml", merge_toml, toml_unplaced)],
+    "opencode": [("templates/opencode.jsonc", "opencode.jsonc", merge_jsonc, jsonc_unplaced)],
 }
 
 
 def merge_templates(h: Harness, dry: bool) -> list[str]:
     live, out = live_dir(h), []
-    for tpl_rel, target_rel, fn in TEMPLATE_MERGES.get(h.name, []):
+    for tpl_rel, target_rel, fn, unplaced in TEMPLATE_MERGES.get(h.name, []):
         tpl, target = RENDERED / h.name / tpl_rel, live / target_rel
         if target.exists() and not dry:
-            bak = target.with_suffix(target.suffix + ".bak")
-            shutil.copy2(target, bak)
+            shutil.copy2(target, target.with_suffix(target.suffix + ".bak"))
         n = fn(target, tpl, dry)
         if n:
             out.append(f"{target_rel}: {n} claves del sistema anadidas")
+        restantes = unplaced(target, tpl) if unplaced else []
+        if restantes:
+            out.append(f"{target_rel}: REVISA A MANO, claves anidadas del sistema que faltan "
+                       f"y no se pueden insertar sin perder tus comentarios:")
+            out += [f"  - {p}" for p in restantes]
     return out

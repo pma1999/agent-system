@@ -122,7 +122,10 @@ carpeta viva), `install --dry-run`, `install --force`, `install --retire-legacy`
 - Los ficheros que gestionábamos y ya no se generan se retiran al backup, no se borran.
 - Las plantillas de configuración se fusionan de forma **aditiva**: se añaden las claves del sistema
   que falten y jamás se sobrescribe un valor existente. La única excepción declarada es subir
-  `subagent_depth` a 2 en OpenCode, que el orquestador opcional necesita.
+  `subagent_depth` a 2 en OpenCode, que el orquestador opcional necesita. Los comentarios y el
+  formato del fichero del usuario se conservan, así que una clave **anidada** que falte dentro de un
+  bloque que ya existe no se inserta: se reporta por su ruta con `REVISA A MANO` para que la añadas
+  tú. Silenciarla sería peor que pedírtela.
 - `publish` usa lista explícita de ficheros. Nunca `git add -A`, así que ni el estado de máquina ni
   las skills de plugin sincronizadas desde claude.ai pueden acabar en el repo.
 

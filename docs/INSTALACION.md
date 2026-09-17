@@ -95,6 +95,13 @@ gestionados por este sistema. Míralos: si son tuyos y los quieres conservar, c�
 pásalos al canon con `agentsys adopt`; si quieres que los sustituya lo generado, repite con
 `--force`.
 
+**`install` dice "REVISA A MANO".** Faltan claves del sistema dentro de un bloque que tu fichero de
+configuración ya tenía. El merge no las inserta para no destrozar tus comentarios. Ábrelo y añádelas
+a mano; la ruta exacta viene en el mensaje. La que más importa es
+`permission.skill.orchestrator: "deny"` en OpenCode: sin ella, la skill `orchestrator` de Claude
+--- visible en OpenCode a través del enlace `~/.claude/skills` --- se anunciaría en el runtime
+equivocado.
+
 **`verify` dice "Identidad de prompts" fallando.** Los tres harnesses han dejado de compartir un
 solo cuerpo. El diff que imprime dice exactamente dónde. Se arregla en el canónico
 (`source/orchestration/`), nunca en un harness suelto.
