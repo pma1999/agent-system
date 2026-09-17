@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from datetime import datetime
@@ -10,11 +11,49 @@ from pathlib import Path
 from _core import HARNESS, RENDERED, ROOT, SOURCE, Harness
 
 MANIFEST = ".agent-system-manifest.json"
-BACKUPS = Path.home() / ".agent-system-backups"
+
+# HOME efectivo. Se puede forzar con --home o AGENTSYS_HOME, lo que importa
+# sobre todo bajo WSL: alli `~` es el home de Linux, pero Claude Code y Codex
+# corren en Windows y leen sus carpetas del home de Windows.
+_HOME_OVERRIDE: Path | None = None
+
+
+def set_home(p: str | None) -> None:
+    global _HOME_OVERRIDE
+    if p:
+        _HOME_OVERRIDE = Path(p).expanduser().resolve()
+
+
+def home() -> Path:
+    if _HOME_OVERRIDE:
+        return _HOME_OVERRIDE
+    env = os.environ.get("AGENTSYS_HOME")
+    return Path(env).expanduser() if env else Path.home()
+
+
+def backups() -> Path:
+    return home() / ".agent-system-backups"
+
+
+def under_wsl() -> bool:
+    try:
+        return "microsoft" in Path("/proc/version").read_text(encoding="utf-8").lower()
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def windows_home_from_wsl() -> Path | None:
+    """El home de Windows visto desde WSL, si se puede deducir."""
+    users = Path("/mnt/c/Users")
+    if not users.is_dir():
+        return None
+    cands = [d for d in users.iterdir()
+             if d.is_dir() and (d / ".claude").is_dir() and not d.name.startswith(("Default", "All", "Public"))]
+    return cands[0] if len(cands) == 1 else None
 
 
 def live_dir(h: Harness) -> Path:
-    return Path(h.install_dir.replace("~", str(Path.home())))
+    return Path(h.install_dir.replace("~", str(home())))
 
 
 def rendered_files(h: Harness) -> list[Path]:
@@ -67,7 +106,7 @@ def install_harness(h: Harness, force: bool, dry: bool, stamp: str) -> tuple[int
                 refused.append(key)
                 continue
             if not dry:
-                bak = BACKUPS / stamp / h.name / rel
+                bak = backups() / stamp / h.name / rel
                 bak.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(dst, bak)
         if not dry:
@@ -80,7 +119,7 @@ def install_harness(h: Harness, force: bool, dry: bool, stamp: str) -> tuple[int
     for key in stale:
         p = live / key
         if p.exists() and not dry:
-            bak = BACKUPS / stamp / h.name / key
+            bak = backups() / stamp / h.name / key
             bak.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(p), str(bak))
     if not dry:

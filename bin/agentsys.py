@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import os
 import re
 import shutil
 import sys
@@ -269,7 +270,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
     print("4. Deriva respecto a las carpetas vivas")
     for h in harnesses.values():
-        live = Path(h.install_dir.replace("~", str(Path.home())))
+        live = _deploy.live_dir(h)
         if not live.exists():
             print(f"  --    {h.name}: {live} no existe (sin instalar)")
             continue
@@ -408,9 +409,21 @@ def main(argv: list[str] | None = None) -> int:
                             help="sobrescribe tambien ficheros que nunca estuvieron gestionados")
             sp.add_argument("--retire-legacy", action="store_true",
                             help="renombra el .git del checkout antiguo de la carpeta viva")
+        if name in ("install", "status", "verify", "adopt"):
+            sp.add_argument("--home", help="HOME a usar como destino (util desde WSL)")
         if name == "publish":
             sp.add_argument("-m", "--message", help="mensaje del commit")
     args = ap.parse_args(argv)
+    _deploy.set_home(getattr(args, "home", None))
+    if _deploy.under_wsl() and not getattr(args, "home", None)             and not os.environ.get("AGENTSYS_HOME") and args.cmd in ("install", "status",
+                                                                     "verify", "adopt"):
+        win = _deploy.windows_home_from_wsl()
+        print("AVISO: estas bajo WSL. `~` es el home de Linux, pero Claude Code y Codex")
+        print("       corren en Windows y leen sus carpetas del home de Windows.")
+        if win:
+            print(f"       Si es lo que querias, repite con:  --home {win}")
+        print("       Para OpenCode da igual: ~/.config/opencode es un enlace a Windows.")
+        print()
     try:
         return COMMANDS[args.cmd](args)
     except BuildError as e:

@@ -78,12 +78,21 @@ El enlace de skills expone globalmente en cualquier proyecto WSL las skills sinc
 copiarlas. `permission.skill` en la configuración de OpenCode deniega la skill `orchestrator` de
 Claude, de modo que el runtime equivocado ni se anuncia ni se puede invocar.
 
-Desde WSL, el sync se lanza con el Python de Windows o con el de Linux indistintamente — el repo
-está en el filesystem de Windows:
+**Ejecuta `install` desde Windows.** Bajo WSL, `~` es el home de Linux, pero Claude Code y Codex
+corren en Windows y leen sus carpetas del home de Windows: un `install` sin más desplegaría en
+`/home/<tu-usuario>/` y no serviría de nada. `agentsys` lo detecta y avisa.
+
+Si necesitas lanzarlo desde WSL — por ejemplo porque sólo trabajas con OpenCode ahí — dile el home
+de Windows explícitamente:
 
 ```bash
-python3 /mnt/c/Users/<usuario-windows>/agent-system/bin/agentsys.py install
+cd /mnt/c/Users/<usuario-windows>/agent-system
+python3 bin/agentsys.py install --home /mnt/c/Users/<usuario-windows>
+python3 bin/agentsys.py verify  --home /mnt/c/Users/<usuario-windows>
 ```
+
+También vale la variable `AGENTSYS_HOME`. Para OpenCode da igual cuál uses: `~/.config/opencode` en
+WSL es un enlace a la carpeta de Windows, así que ambos caminos llegan al mismo sitio.
 
 ## Problemas típicos
 

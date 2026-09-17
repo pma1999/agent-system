@@ -99,6 +99,10 @@ install + verify de una vez.
 Otros comandos: `status` (resumen corto), `adopt` (recupera al canon un cambio hecho a mano en una
 carpeta viva), `install --dry-run`, `install --force`, `install --retire-legacy`.
 
+**Desde WSL**, `~` es el home de Linux pero Claude Code y Codex leen el de Windows. `agentsys` lo
+detecta y avisa; pásale `--home /mnt/c/Users/<usuario>` (o `AGENTSYS_HOME`) si de verdad quieres
+lanzarlo desde ahí. Ver [docs/INSTALACION.md](docs/INSTALACION.md).
+
 ## Qué garantiza `verify`
 
 1. **Render determinista.** `rendered/` es exactamente lo que produce `source/ + harness/`. Detecta
