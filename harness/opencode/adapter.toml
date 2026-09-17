@@ -53,11 +53,13 @@ ADVISOR_CONTEXT = """
 # `frontmatter` es el bloque YAML literal entre los `---`. Admite tokens.
 
 [agents.codebase-explorer]
+model = "opencode-go/muse-spark-1.3-contributor"
+effort = "xhigh"
 frontmatter = """
 description: "{{DESCRIPTION}}"
 mode: subagent
-model: opencode-go/muse-spark-1.3-contributor
-variant: xhigh
+model: {{MODEL}}
+variant: {{EFFORT}}
 color: "#22d3ee"
 permission:
   task:
@@ -76,11 +78,13 @@ permission:
 """
 
 [agents.integration-researcher]
+model = "opencode-go/muse-spark-1.3-contributor"
+effort = "xhigh"
 frontmatter = """
 description: "{{DESCRIPTION}}"
 mode: subagent
-model: opencode-go/muse-spark-1.3-contributor
-variant: xhigh
+model: {{MODEL}}
+variant: {{EFFORT}}
 color: "#eab308"
 tools:
   "playwright_*": true
@@ -101,11 +105,13 @@ permission:
 """
 
 [agents.implementation-planner]
+model = "opencode-go/muse-spark-1.3-contributor"
+effort = "xhigh"
 frontmatter = """
 description: "{{DESCRIPTION}}"
 mode: subagent
-model: opencode-go/muse-spark-1.3-contributor
-variant: xhigh
+model: {{MODEL}}
+variant: {{EFFORT}}
 color: "#3b82f6"
 permission:
   task:
@@ -124,11 +130,13 @@ permission:
 """
 
 [agents.root-cause-debugger]
+model = "opencode-go/muse-spark-1.3-contributor"
+effort = "xhigh"
 frontmatter = """
 description: "{{DESCRIPTION}}"
 mode: subagent
-model: opencode-go/muse-spark-1.3-contributor
-variant: xhigh
+model: {{MODEL}}
+variant: {{EFFORT}}
 color: "#f97316"
 tools:
   "playwright_*": true
@@ -149,11 +157,13 @@ permission:
 """
 
 [agents.task-implementer-bdd]
+model = "opencode-go/muse-spark-1.3-contributor"
+effort = "xhigh"
 frontmatter = """
 description: "{{DESCRIPTION}}"
 mode: subagent
-model: opencode-go/muse-spark-1.3-contributor
-variant: xhigh
+model: {{MODEL}}
+variant: {{EFFORT}}
 color: "#22c55e"
 tools:
   "playwright_*": true
@@ -169,11 +179,13 @@ permission:
 """
 
 [agents.implementation-reviewer]
+model = "opencode-go/muse-spark-1.3-contributor"
+effort = "xhigh"
 frontmatter = """
 description: "{{DESCRIPTION}}"
 mode: subagent
-model: opencode-go/muse-spark-1.3-contributor
-variant: xhigh
+model: {{MODEL}}
+variant: {{EFFORT}}
 color: "#a855f7"
 tools:
   "playwright_*": true
@@ -194,11 +206,13 @@ permission:
 """
 
 [agents.advisor]
+model = "opencode-go/muse-spark-1.3-contributor"
+effort = "xhigh"
 frontmatter = """
 description: "{{DESCRIPTION}}"
 mode: all
-model: opencode-go/muse-spark-1.3-contributor
-variant: xhigh
+model: {{MODEL}}
+variant: {{EFFORT}}
 color: "#f43f5e"
 permission:
   task: deny
@@ -226,3 +240,36 @@ description: >-
   change, or a hard diagnosis, even when the request first sounds small. Do not load it from the
   default `build` agent or from any specialist subagent.\
 """
+
+[agents.orquestador]
+model = "opencode-go/muse-spark-1.3-contributor"
+effort = "xhigh"
+frontmatter = """
+description: "{{DESCRIPTION}}"
+mode: all
+model: {{MODEL}}
+variant: {{EFFORT}}
+color: "#0ea5e9"
+steps: 80
+permission:
+  task:
+    "*": deny
+    codebase-explorer: allow
+    integration-researcher: allow
+    implementation-planner: allow
+    root-cause-debugger: allow
+    task-implementer-bdd: allow
+    implementation-reviewer: allow
+    advisor: allow
+  question: allow
+  edit:
+    "*": deny
+    "plans/**": allow
+    "**/plans/**": allow
+    "/tmp/opencode/**": allow
+    "tmp/opencode/**": allow
+  todowrite: allow
+  skill:
+    "*": allow
+    orchestrator: deny
+    opencode-orchestrator: allow"""

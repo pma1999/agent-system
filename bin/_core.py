@@ -139,8 +139,13 @@ def wrap_agent(h: Harness, role: Role, body: str) -> str:
     if cfg is None:
         raise BuildError(f"adapter {h.name}: falta [agents.{role.name}]")
     desc = substitute(role.description, h.tokens, f"roles.toml:{role.name} [{h.name}]")
-    fm = substitute(cfg["frontmatter"], {**h.tokens, "DESCRIPTION": desc},
-                    f"adapter {h.name} [agents.{role.name}]")
+    where = f"adapter {h.name} [agents.{role.name}]"
+    for k in ("model", "effort"):
+        if not cfg.get(k):
+            raise BuildError(f"{where}: falta `{k}`")
+    fm = substitute(cfg["frontmatter"],
+                    {**h.tokens, "DESCRIPTION": desc,
+                     "MODEL": cfg["model"], "EFFORT": cfg["effort"]}, where)
     if h.agent_format == "markdown_frontmatter":
         return f"---\n{fm}\n---\n\n{body.rstrip(chr(10))}\n"
     if h.agent_format == "toml_developer_instructions":

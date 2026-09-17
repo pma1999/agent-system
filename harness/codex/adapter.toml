@@ -52,71 +52,85 @@ ADVISOR_CONTEXT = """
 # Se conserva el escalado de modelos que ya tenía Codex.
 
 [agents.codebase-explorer]
+model = "gpt-5.6-luna"
+effort = "max"
 frontmatter = """
 name = "codebase-explorer"
 description = '''{{DESCRIPTION}}'''
-model = "gpt-5.6-luna"
-model_reasoning_effort = "max"
+model = "{{MODEL}}"
+model_reasoning_effort = "{{EFFORT}}"
 sandbox_mode = "workspace-write"
 nickname_candidates = ["Mapper", "Surveyor", "Cartographer"]\
 """
 
 [agents.integration-researcher]
+model = "gpt-5.6-luna"
+effort = "max"
 frontmatter = """
 name = "integration-researcher"
 description = '''{{DESCRIPTION}}'''
-model = "gpt-5.6-luna"
-model_reasoning_effort = "max"
+model = "{{MODEL}}"
+model_reasoning_effort = "{{EFFORT}}"
 sandbox_mode = "workspace-write"
 nickname_candidates = ["Scout", "Verifier", "Compass"]\
 """
 
 [agents.implementation-planner]
+model = "gpt-5.6-sol"
+effort = "xhigh"
 frontmatter = """
 name = "implementation-planner"
 description = '''{{DESCRIPTION}}'''
-model = "gpt-5.6-sol"
-model_reasoning_effort = "xhigh"
+model = "{{MODEL}}"
+model_reasoning_effort = "{{EFFORT}}"
 sandbox_mode = "workspace-write"
 nickname_candidates = ["Architect", "Planner", "Northstar"]\
 """
 
 [agents.root-cause-debugger]
+model = "gpt-5.6-luna"
+effort = "max"
 frontmatter = """
 name = "root-cause-debugger"
 description = '''{{DESCRIPTION}}'''
-model = "gpt-5.6-luna"
-model_reasoning_effort = "max"
+model = "{{MODEL}}"
+model_reasoning_effort = "{{EFFORT}}"
 sandbox_mode = "workspace-write"
 nickname_candidates = ["Tracer", "Forensics", "Debug"]\
 """
 
 [agents.task-implementer-bdd]
+model = "gpt-5.6-luna"
+effort = "xhigh"
 frontmatter = """
 name = "task-implementer-bdd"
 description = '''{{DESCRIPTION}}'''
-model = "gpt-5.6-luna"
-model_reasoning_effort = "xhigh"
+model = "{{MODEL}}"
+model_reasoning_effort = "{{EFFORT}}"
 sandbox_mode = "workspace-write"
 nickname_candidates = ["Builder", "Implementer", "Greenbar"]\
 """
 
 [agents.implementation-reviewer]
+model = "gpt-5.6-luna"
+effort = "max"
 frontmatter = """
 name = "implementation-reviewer"
 description = '''{{DESCRIPTION}}'''
-model = "gpt-5.6-luna"
-model_reasoning_effort = "max"
+model = "{{MODEL}}"
+model_reasoning_effort = "{{EFFORT}}"
 sandbox_mode = "workspace-write"
 nickname_candidates = ["Verifier", "Sentinel", "Audit"]\
 """
 
 [agents.advisor]
+model = "gpt-5.6-sol"
+effort = "high"
 frontmatter = """
 name = "advisor"
 description = '''{{DESCRIPTION}}'''
-model = "gpt-5.6-sol"
-model_reasoning_effort = "high"
+model = "{{MODEL}}"
+model_reasoning_effort = "{{EFFORT}}"
 sandbox_mode = "read-only"
 nickname_candidates = ["Counsel", "Sage", "Oracle"]\
 """

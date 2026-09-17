@@ -1,0 +1,30 @@
+# Perfil de modelos para codex.
+description = "Estado vigente el 2026-09-17, antes de cualquier cambio"
+
+[roles.codebase-explorer]
+model = "gpt-5.6-luna"
+effort = "max"
+
+[roles.integration-researcher]
+model = "gpt-5.6-luna"
+effort = "max"
+
+[roles.implementation-planner]
+model = "gpt-5.6-sol"
+effort = "xhigh"
+
+[roles.root-cause-debugger]
+model = "gpt-5.6-luna"
+effort = "max"
+
+[roles.task-implementer-bdd]
+model = "gpt-5.6-luna"
+effort = "xhigh"
+
+[roles.implementation-reviewer]
+model = "gpt-5.6-luna"
+effort = "max"
+
+[roles.advisor]
+model = "gpt-5.6-sol"
+effort = "high"

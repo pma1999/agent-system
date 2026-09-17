@@ -49,3 +49,11 @@ description = "Use when the {{WORKFLOW}} needs an independent task or final revi
 name = "advisor"
 harnesses = ["codex", "opencode"]
 description = "Use when the {{WORKFLOW}} or one specialist needs an independent second opinion at a genuine decision point: before committing to an approach, when stuck, or at a high-stakes gate. Strictly read-only; reads the referenced evidence itself, returns decision-grade advice, and never writes code or coordinates work."
+
+# Agente padre. Solo existe en OpenCode: es el unico harness cuyo flujo por
+# defecto (`build`) no es el coordinador. Al estar en un solo harness queda
+# fuera del check de identidad por construccion.
+[[role]]
+name = "orquestador"
+harnesses = ["opencode"]
+description = "Optional parent agent for genuinely complex engineering work that benefits from discovery, planning, implementation waves, and independent review. Select it manually, or let build propose it with user approval. It coordinates specialists and is never the default agent."

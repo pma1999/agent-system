@@ -1,0 +1,26 @@
+# Perfil de modelos para claude.
+description = "Estado vigente el 2026-09-17, antes de cualquier cambio"
+
+[roles.codebase-explorer]
+model = "sonnet"
+effort = "high"
+
+[roles.integration-researcher]
+model = "sonnet"
+effort = "high"
+
+[roles.implementation-planner]
+model = "opus"
+effort = "xhigh"
+
+[roles.root-cause-debugger]
+model = "sonnet"
+effort = "high"
+
+[roles.task-implementer-bdd]
+model = "opus"
+effort = "xhigh"
+
+[roles.implementation-reviewer]
+model = "opus"
+effort = "xhigh"

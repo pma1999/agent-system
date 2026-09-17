@@ -1,0 +1,34 @@
+# Perfil de modelos para opencode.
+description = "Migrado de model-profiles/ox-alpha-free-max el 2026-09-17"
+
+[roles.codebase-explorer]
+model = "opencode/x-preview-f-free"
+effort = "max"
+
+[roles.integration-researcher]
+model = "opencode/x-preview-f-free"
+effort = "max"
+
+[roles.implementation-planner]
+model = "opencode/x-preview-f-free"
+effort = "max"
+
+[roles.root-cause-debugger]
+model = "opencode/x-preview-f-free"
+effort = "max"
+
+[roles.task-implementer-bdd]
+model = "opencode/x-preview-f-free"
+effort = "max"
+
+[roles.implementation-reviewer]
+model = "opencode/x-preview-f-free"
+effort = "max"
+
+[roles.advisor]
+model = "opencode/x-preview-f-free"
+effort = "max"
+
+[roles.orquestador]
+model = "opencode/x-preview-f-free"
+effort = "max"

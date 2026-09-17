@@ -54,61 +54,73 @@ ADVISOR_CONTEXT = """
 # `frontmatter` es el bloque YAML literal entre los `---`. Admite tokens.
 
 [agents.codebase-explorer]
+model = "sonnet"
+effort = "high"
 frontmatter = """
 name: codebase-explorer
 description: "{{DESCRIPTION}}"
-model: sonnet
-effort: high
+model: {{MODEL}}
+effort: {{EFFORT}}
 color: cyan
 disallowedTools: Agent\
 """
 
 [agents.integration-researcher]
+model = "sonnet"
+effort = "high"
 frontmatter = """
 name: integration-researcher
 description: "{{DESCRIPTION}}"
-model: sonnet
-effort: high
+model: {{MODEL}}
+effort: {{EFFORT}}
 color: yellow
 disallowedTools: Agent\
 """
 
 [agents.implementation-planner]
+model = "opus"
+effort = "xhigh"
 frontmatter = """
 name: implementation-planner
 description: "{{DESCRIPTION}}"
-model: opus
-effort: xhigh
+model: {{MODEL}}
+effort: {{EFFORT}}
 color: blue
 disallowedTools: Agent\
 """
 
 [agents.root-cause-debugger]
+model = "sonnet"
+effort = "high"
 frontmatter = """
 name: root-cause-debugger
 description: "{{DESCRIPTION}}"
-model: sonnet
-effort: high
+model: {{MODEL}}
+effort: {{EFFORT}}
 color: orange
 disallowedTools: Agent\
 """
 
 [agents.task-implementer-bdd]
+model = "opus"
+effort = "xhigh"
 frontmatter = """
 name: task-implementer-bdd
 description: "{{DESCRIPTION}}"
-model: opus
-effort: xhigh
+model: {{MODEL}}
+effort: {{EFFORT}}
 color: green
 disallowedTools: Agent\
 """
 
 [agents.implementation-reviewer]
+model = "opus"
+effort = "xhigh"
 frontmatter = """
 name: implementation-reviewer
 description: "{{DESCRIPTION}}"
-model: opus
-effort: xhigh
+model: {{MODEL}}
+effort: {{EFFORT}}
 color: purple
 disallowedTools: Agent\
 """

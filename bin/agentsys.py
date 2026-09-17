@@ -24,6 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _core  # noqa: E402
 import _deploy  # noqa: E402
+import _models  # noqa: E402
 import _schema  # noqa: E402
 from _core import (  # noqa: E402
     ANCHOR_RE, BuildError, Harness, RENDERED, ROOT, Role, SOURCE, copy_tree,
@@ -238,8 +239,6 @@ def cmd_verify(args: argparse.Namespace) -> int:
     for h in harnesses.values():
         pattern, checker = _schema.CHECKERS[h.name]
         esperados = {r.name for r in roles if h.name in r.harnesses}
-        if h.name == "opencode":
-            esperados |= {"orquestador"}          # agente padre, exclusivo de OpenCode
         vistos = set()
         for p in sorted((RENDERED / h.name).glob(pattern)):
             vistos.add(p.stem)
@@ -390,8 +389,91 @@ def cmd_publish(args: argparse.Namespace) -> int:
     return r.returncode
 
 
+def _harness_of(args, harnesses):
+    if not args.harness:
+        raise SystemExit("error: indica --harness claude|codex|opencode")
+    if args.harness not in harnesses:
+        raise SystemExit(f"error: harness desconocido {args.harness!r}")
+    return harnesses[args.harness]
+
+
+def cmd_models(args: argparse.Namespace) -> int:
+    harnesses = load_harnesses()
+    accion = args.accion
+
+    if accion == "list":
+        objetivo = [args.harness] if args.harness else list(harnesses)
+        for name in objetivo:
+            h = harnesses[name]
+            actual = _models.current(h)
+            print(f"{name}  ({len(actual)} roles)")
+            for p in _models.list_profiles(name):
+                d = _models.load_profile(name, p.stem)
+                roles = {k: (v["model"], v["effort"]) for k, v in d.get("roles", {}).items()}
+                marca = "*" if roles == actual else " "
+                print(f"  {marca} {p.stem:<34} {d.get('description', '')}")
+            if not _models.list_profiles(name):
+                print("    (sin perfiles)")
+            print()
+        print("* = coincide con lo que hay ahora en el adaptador")
+        return 0
+
+    h = _harness_of(args, harnesses)
+
+    if accion == "show":
+        d = _models.load_profile(h.name, args.nombre)
+        print(f"{args.nombre}  --  {d.get('description', '')}")
+        for role, cfg in d.get("roles", {}).items():
+            print(f"  {role:<24} {cfg['model']}  ({cfg['effort']})")
+        return 0
+
+    if accion == "save":
+        p = _models.save_profile(h.name, args.nombre, h, args.description)
+        print(f"  guardado {p.relative_to(ROOT)}")
+        return 0
+
+    # apply / set -> escriben el adaptador
+    if accion == "apply":
+        d = _models.load_profile(h.name, args.nombre)
+        cambios = {r: (c["model"], c["effort"]) for r, c in d.get("roles", {}).items()}
+        modelo, effort = None, None
+        if cambios:
+            modelo = next(iter(cambios.values()))[0]
+            effort = next(iter(cambios.values()))[1]
+    else:
+        if not args.model:
+            raise SystemExit("error: `set` necesita --model")
+        objetivo = args.role or list(h.agents)
+        effort = args.effort
+        cambios = {r: (args.model, effort or h.agents[r]["effort"])
+                   for r in objetivo if r in h.agents}
+        desconocidos = [r for r in objetivo if r not in h.agents]
+        for r in desconocidos:
+            print(f"  -- rol desconocido en {h.name}: {r}")
+        modelo = args.model
+
+    scope = args.scope
+    if scope in ("ours", "both"):
+        for line in _models.write_adapter(h.name, cambios):
+            print(line)
+    if scope in ("omo", "both"):
+        if h.name != "opencode":
+            print("  -- --scope omo solo aplica a opencode; ignorado")
+        else:
+            for line in _models.omo_apply(modelo, effort, args.omo_preset):
+                print(line)
+
+    if scope in ("ours", "both"):
+        roles, harnesses = load_roles(), load_harnesses()
+        for x in harnesses.values():
+            write_tree(x, render_harness(x, roles))
+        print("  render actualizado; ejecuta `agentsys install` para desplegarlo")
+    return 0
+
+
 COMMANDS = {"build": cmd_build, "verify": cmd_verify, "status": cmd_status,
-            "install": cmd_install, "adopt": cmd_adopt, "publish": cmd_publish}
+            "install": cmd_install, "adopt": cmd_adopt, "publish": cmd_publish,
+            "models": cmd_models}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -413,6 +495,20 @@ def main(argv: list[str] | None = None) -> int:
             sp.add_argument("--home", help="HOME a usar como destino (util desde WSL)")
         if name == "publish":
             sp.add_argument("-m", "--message", help="mensaje del commit")
+        if name == "models":
+            sp.add_argument("accion", choices=["list", "show", "apply", "set", "save"])
+            sp.add_argument("nombre", nargs="?", help="nombre del perfil")
+            sp.add_argument("--harness", choices=["claude", "codex", "opencode"])
+            sp.add_argument("--model", help="modelo a fijar (accion `set`)")
+            sp.add_argument("--effort", help="effort/variant a fijar (accion `set`)")
+            sp.add_argument("--role", action="append",
+                            help="limita a un rol; repetible. Por defecto, todos")
+            sp.add_argument("--description", help="descripcion al guardar")
+            sp.add_argument("--scope", choices=["ours", "omo", "both"], default="ours",
+                            help="ours (por defecto) = solo el roster del orquestador; "
+                                 "omo = solo oh-my-opencode-slim.json; both = los dos")
+            sp.add_argument("--omo-preset",
+                            help="preset de OMO a tocar; por defecto, el activo")
     args = ap.parse_args(argv)
     _deploy.set_home(getattr(args, "home", None))
     if _deploy.under_wsl() and not getattr(args, "home", None)             and not os.environ.get("AGENTSYS_HOME") and args.cmd in ("install", "status",

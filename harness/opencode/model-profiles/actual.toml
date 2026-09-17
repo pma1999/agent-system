@@ -1,0 +1,34 @@
+# Perfil de modelos para opencode.
+description = "Estado vigente el 2026-09-17, antes de cualquier cambio"
+
+[roles.codebase-explorer]
+model = "opencode-go/muse-spark-1.3-contributor"
+effort = "xhigh"
+
+[roles.integration-researcher]
+model = "opencode-go/muse-spark-1.3-contributor"
+effort = "xhigh"
+
+[roles.implementation-planner]
+model = "opencode-go/muse-spark-1.3-contributor"
+effort = "xhigh"
+
+[roles.root-cause-debugger]
+model = "opencode-go/muse-spark-1.3-contributor"
+effort = "xhigh"
+
+[roles.task-implementer-bdd]
+model = "opencode-go/muse-spark-1.3-contributor"
+effort = "xhigh"
+
+[roles.implementation-reviewer]
+model = "opencode-go/muse-spark-1.3-contributor"
+effort = "xhigh"
+
+[roles.advisor]
+model = "opencode-go/muse-spark-1.3-contributor"
+effort = "xhigh"
+
+[roles.orquestador]
+model = "opencode-go/muse-spark-1.3-contributor"
+effort = "xhigh"

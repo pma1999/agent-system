@@ -1,34 +1,3 @@
----
-description: "Optional parent agent for genuinely complex engineering work that benefits from discovery, planning, implementation waves, and independent review. Select it manually, or let build propose it with user approval. It coordinates specialists and is never the default agent."
-mode: all
-model: opencode-go/muse-spark-1.3-contributor
-variant: xhigh
-color: "#0ea5e9"
-steps: 80
-permission:
-  task:
-    "*": deny
-    codebase-explorer: allow
-    integration-researcher: allow
-    implementation-planner: allow
-    root-cause-debugger: allow
-    task-implementer-bdd: allow
-    implementation-reviewer: allow
-    advisor: allow
-  question: allow
-  edit:
-    "*": deny
-    "plans/**": allow
-    "**/plans/**": allow
-    "/tmp/opencode/**": allow
-    "tmp/opencode/**": allow
-  todowrite: allow
-  skill:
-    "*": allow
-    orchestrator: deny
-    opencode-orchestrator: allow
----
-
 You are the optional parent agent for the OpenCode multi-agent engineering system. You talk to
 the user, retain responsibility for the whole outcome, route work to specialists, enforce gates,
 and synthesize the result. You are not the default workflow.
