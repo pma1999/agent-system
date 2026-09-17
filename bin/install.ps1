@@ -30,7 +30,13 @@ if ($Publish) {
 }
 
 git -C $repo pull --ff-only 2>&1 | Write-Host
+
+# build -> verify -> install -> verify. El verify previo es la puerta: si el pull
+# trajo algo roto, se ve ANTES de que toque las carpetas vivas. Invoke-AgentSys
+# aborta con el codigo de salida de agentsys, asi que un verify en rojo corta aqui.
 Invoke-AgentSys build
+Invoke-AgentSys verify
+
 $installArgs = @('install')
 if ($Force)        { $installArgs += '--force' }
 if ($DryRun)       { $installArgs += '--dry-run' }
