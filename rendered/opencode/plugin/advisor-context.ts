@@ -205,6 +205,15 @@ async function server({ client }: { client: any }) {
 // V2 (opencode2) — API nativa de plugins
 // ---------------------------------------------------------------------------
 async function setup(ctx: any) {
+  // En OpenCode V1 este `setup` tambien se invoca, pero las APIs de plugin de V2
+  // no existen. Sin esta guarda, cada arranque escupia dos errores por stderr
+  // que parecian una rotura del plugin cuando en realidad la inyeccion la hace
+  // el hook V1 `tool.execute.before` de `server`, mas abajo.
+  if (typeof ctx?.session?.hook !== "function" || typeof ctx?.tool?.hook !== "function") {
+    log("APIs de plugin V2 ausentes: se usa la ruta V1 (server/tool.execute.before)")
+    return
+  }
+
   // Cachea los mensajes de cada sesión en cada dispatch al modelo.
   // La sesión que lanza el subagent tool ya pasó por aquí al menos una vez.
   const transcripts = new Map<string, any[]>()
