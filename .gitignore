@@ -15,3 +15,8 @@
 !/patches/
 !/plans/
 !/templates/
+
+# Plugin skills synced from claude.ai into skills/ and plugins/: third-party
+# content, machine state, never ours to publish.
+/skills/synced/
+/plugins/synced/
