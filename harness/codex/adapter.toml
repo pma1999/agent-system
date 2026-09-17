@@ -1,0 +1,135 @@
+# Adaptador Codex CLI.
+#
+# No hay agente orquestador: coordina el hilo Codex de nivel superior. Los
+# especialistas son ficheros TOML que Codex descubre por convención bajo
+# $CODEX_HOME/agents/. La colaboración es nativa y requiere
+# `[features] multi_agent = true` en config.toml.
+
+harness = "codex"
+install_dir = "~/.codex"
+agent_format = "toml_developer_instructions"
+agent_path = "agents/{role}.toml"
+skill_path = "skills/{skill}/SKILL.md"
+
+[tokens]
+ORCH_SKILL = "orchestrator"
+WORKFLOW = "orchestrator"
+PARENT = "thread"
+COORDINATOR = "the top-level Codex thread"
+SPAWN = "`spawn_agent` with `agent_type` set to the roster name and `fork_turns=\"none\"`"
+RESUME = "`followup_task` on the recorded owner"
+OWNER_ID = "agent id"
+ASK_USER = "a direct question in the thread"
+PROVENANCE = "engine=codex | model=gpt-5.6-sol | effort=xhigh"
+MODEL_PIN = "a fixed per-role profile declared in each agent TOML"
+
+COORDINATOR_INTRO = """
+You are the parent coordinator: the current top-level Codex thread. You talk to the user, retain
+responsibility for the complete outcome, choose the lightest safe lane, dispatch specialists,
+maintain durable artifacts, enforce approval and quality gates, and report the observed result.
+Never create or spawn a separate orchestrator agent."""
+ROSTER_ADVISOR = "| `advisor` | Read-only second opinion on decisions, risks, and stuck states | nothing |"
+
+ADVISOR_DELEGATION = """
+You may spawn only fresh `advisor` consultations, and only at a genuine decision point: you are
+stuck after two failed attempts, or a high-stakes choice your inputs do not settle. Use
+`spawn_agent` with `agent_type="advisor"`, `fork_turns="all"`, a complete Consultation Brief, then
+`wait_agent`. Each consult is a new advisor; never resume one as a work owner. If depth or capacity
+prevents it, return the decision point to the parent instead. All other delegation is forbidden.\
+"""
+
+ADVISOR_CONTEXT = """
+- A spawned consultation receives a Consultation Brief (`Context`, `Evidence`, `Question`,
+  `Constraints`) plus the caller's retained thread through native `fork_turns="all"`. The inherited
+  thread is chronological and authoritative, subject to normal Codex compaction. Do not ask the
+  caller to re-narrate history already visible.
+- As a directly selected primary session, the conversation itself is your context. Answer with the
+  same decision discipline, conversationally.\
+"""
+
+# --- Envoltorios por rol -------------------------------------------------
+# `frontmatter` son las claves TOML que preceden a `developer_instructions`.
+# Se conserva el escalado de modelos que ya tenía Codex.
+
+[agents.codebase-explorer]
+frontmatter = """
+name = "codebase-explorer"
+description = '''{{DESCRIPTION}}'''
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
+sandbox_mode = "workspace-write"
+nickname_candidates = ["Mapper", "Surveyor", "Cartographer"]\
+"""
+
+[agents.integration-researcher]
+frontmatter = """
+name = "integration-researcher"
+description = '''{{DESCRIPTION}}'''
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
+sandbox_mode = "workspace-write"
+nickname_candidates = ["Scout", "Verifier", "Compass"]\
+"""
+
+[agents.implementation-planner]
+frontmatter = """
+name = "implementation-planner"
+description = '''{{DESCRIPTION}}'''
+model = "gpt-5.6-sol"
+model_reasoning_effort = "xhigh"
+sandbox_mode = "workspace-write"
+nickname_candidates = ["Architect", "Planner", "Northstar"]\
+"""
+
+[agents.root-cause-debugger]
+frontmatter = """
+name = "root-cause-debugger"
+description = '''{{DESCRIPTION}}'''
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
+sandbox_mode = "workspace-write"
+nickname_candidates = ["Tracer", "Forensics", "Debug"]\
+"""
+
+[agents.task-implementer-bdd]
+frontmatter = """
+name = "task-implementer-bdd"
+description = '''{{DESCRIPTION}}'''
+model = "gpt-5.6-luna"
+model_reasoning_effort = "xhigh"
+sandbox_mode = "workspace-write"
+nickname_candidates = ["Builder", "Implementer", "Greenbar"]\
+"""
+
+[agents.implementation-reviewer]
+frontmatter = """
+name = "implementation-reviewer"
+description = '''{{DESCRIPTION}}'''
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
+sandbox_mode = "workspace-write"
+nickname_candidates = ["Verifier", "Sentinel", "Audit"]\
+"""
+
+[agents.advisor]
+frontmatter = """
+name = "advisor"
+description = '''{{DESCRIPTION}}'''
+model = "gpt-5.6-sol"
+model_reasoning_effort = "high"
+sandbox_mode = "read-only"
+nickname_candidates = ["Counsel", "Sage", "Oracle"]\
+"""
+
+# --- Skill orquestadora ---------------------------------------------------
+
+[skill]
+frontmatter = """
+name: orchestrator
+description: >-
+  Optional multi-agent engineering workflow. Apply it only when the user invokes $orchestrator, asks
+  to orchestrate, or clearly asks for the multi-agent workflow: the current top-level Codex thread
+  then coordinates discovery, external-contract research, planning, BDD implementation, independent
+  review, debugging, and remediation through dedicated specialist agents. Do not apply it
+  automatically to ordinary engineering work, and never load it from a specialist.\
+"""

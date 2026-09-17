@@ -1,0 +1,228 @@
+# Adaptador OpenCode.
+#
+# El coordinador es un agente propio (`orquestador`), no el hilo por defecto:
+# en OpenCode `build` sigue siendo el agente predeterminado y el orquestador es
+# una ruta opcional que el usuario selecciona o que `build` propone.
+
+harness = "opencode"
+install_dir = "~/.config/opencode"
+agent_format = "markdown_frontmatter"
+agent_path = "agents/{role}.md"
+skill_path = "skills/{skill}/SKILL.md"
+
+[tokens]
+ORCH_SKILL = "opencode-orchestrator"
+WORKFLOW = "orquestador"
+PARENT = "orquestador"
+COORDINATOR = "the `orquestador` agent"
+SPAWN = "the task tool with the roster name as `subagent_type`"
+RESUME = "a task call carrying the recorded `task_id`"
+OWNER_ID = "task_id"
+ASK_USER = "the `question` tool"
+PROVENANCE = "engine=opencode | model=opencode-go/muse-spark-1.3-contributor | effort=xhigh"
+MODEL_PIN = "opencode-go/muse-spark-1.3-contributor, variant xhigh"
+
+COORDINATOR_INTRO = """
+You are the parent coordinator. You talk to the user, retain responsibility for the complete
+outcome, choose the lightest safe lane, dispatch specialists, maintain durable artifacts, enforce
+approval and quality gates, and report the observed result.
+
+If you are not running as `orquestador`, this model does not apply. Say so and hand back to the
+caller instead of coordinating agents."""
+ROSTER_ADVISOR = "| `advisor` | Read-only second opinion on decisions, risks, and stuck states | nothing |"
+
+ADVISOR_DELEGATION = """
+You may consult only the read-only `advisor`, and only at a genuine decision point: you are stuck
+after two failed attempts, or a high-stakes choice your inputs do not settle. Dispatch it with the
+task tool as `advisor`, carrying a complete Consultation Brief with the exact evidence paths it must
+read. Each consult is a fresh advisor; never resume one as a work owner. If the depth cap prevents
+it, return the decision point to the parent instead. All other delegation is denied.\
+"""
+
+ADVISOR_CONTEXT = """
+- As a dispatched subagent you receive a Consultation Brief (`Context`, `Evidence`, `Question`,
+  `Constraints`) plus a `CONTEXTO PREVIO COMPLETO` block that the `advisor-context` plugin injects
+  automatically: the caller's full prior transcript, most recent first, with internal reasoning
+  blocks omitted. That transcript is authoritative for what happened; a truncation notice appears
+  only when a size cap was hit. Do not ask the caller to re-narrate history already visible.
+- As a directly selected primary session, the conversation itself is your context. Answer with the
+  same decision discipline, conversationally.\
+"""
+
+# --- Envoltorios por rol -------------------------------------------------
+# `frontmatter` es el bloque YAML literal entre los `---`. Admite tokens.
+
+[agents.codebase-explorer]
+frontmatter = """
+description: "{{DESCRIPTION}}"
+mode: subagent
+model: opencode-go/muse-spark-1.3-contributor
+variant: xhigh
+color: "#22d3ee"
+permission:
+  task:
+    "*": deny
+    advisor: allow
+  edit:
+    "*": deny
+    "plans/**": allow
+    "**/plans/**": allow
+    "/tmp/opencode/**": allow
+    "tmp/opencode/**": allow
+  skill:
+    "*": allow
+    orchestrator: deny
+    opencode-orchestrator: deny\
+"""
+
+[agents.integration-researcher]
+frontmatter = """
+description: "{{DESCRIPTION}}"
+mode: subagent
+model: opencode-go/muse-spark-1.3-contributor
+variant: xhigh
+color: "#eab308"
+tools:
+  "playwright_*": true
+permission:
+  task:
+    "*": deny
+    advisor: allow
+  edit:
+    "*": deny
+    "plans/**": allow
+    "**/plans/**": allow
+    "/tmp/opencode/**": allow
+    "tmp/opencode/**": allow
+  skill:
+    "*": allow
+    orchestrator: deny
+    opencode-orchestrator: deny\
+"""
+
+[agents.implementation-planner]
+frontmatter = """
+description: "{{DESCRIPTION}}"
+mode: subagent
+model: opencode-go/muse-spark-1.3-contributor
+variant: xhigh
+color: "#3b82f6"
+permission:
+  task:
+    "*": deny
+    advisor: allow
+  edit:
+    "*": deny
+    "plans/**": allow
+    "**/plans/**": allow
+    "/tmp/opencode/**": allow
+    "tmp/opencode/**": allow
+  skill:
+    "*": allow
+    orchestrator: deny
+    opencode-orchestrator: deny\
+"""
+
+[agents.root-cause-debugger]
+frontmatter = """
+description: "{{DESCRIPTION}}"
+mode: subagent
+model: opencode-go/muse-spark-1.3-contributor
+variant: xhigh
+color: "#f97316"
+tools:
+  "playwright_*": true
+permission:
+  task:
+    "*": deny
+    advisor: allow
+  edit:
+    "*": deny
+    "plans/**": allow
+    "**/plans/**": allow
+    "/tmp/opencode/**": allow
+    "tmp/opencode/**": allow
+  skill:
+    "*": allow
+    orchestrator: deny
+    opencode-orchestrator: deny\
+"""
+
+[agents.task-implementer-bdd]
+frontmatter = """
+description: "{{DESCRIPTION}}"
+mode: subagent
+model: opencode-go/muse-spark-1.3-contributor
+variant: xhigh
+color: "#22c55e"
+tools:
+  "playwright_*": true
+permission:
+  task:
+    "*": deny
+    advisor: allow
+  edit: allow
+  skill:
+    "*": allow
+    orchestrator: deny
+    opencode-orchestrator: deny\
+"""
+
+[agents.implementation-reviewer]
+frontmatter = """
+description: "{{DESCRIPTION}}"
+mode: subagent
+model: opencode-go/muse-spark-1.3-contributor
+variant: xhigh
+color: "#a855f7"
+tools:
+  "playwright_*": true
+permission:
+  task:
+    "*": deny
+    advisor: allow
+  edit:
+    "*": deny
+    "plans/**": allow
+    "**/plans/**": allow
+    "/tmp/opencode/**": allow
+    "tmp/opencode/**": allow
+  skill:
+    "*": allow
+    orchestrator: deny
+    opencode-orchestrator: deny\
+"""
+
+[agents.advisor]
+frontmatter = """
+description: "{{DESCRIPTION}}"
+mode: all
+model: opencode-go/muse-spark-1.3-contributor
+variant: xhigh
+color: "#f43f5e"
+permission:
+  task: deny
+  edit: deny
+  bash: deny
+  question: deny
+  webfetch: allow
+  websearch: allow
+  skill:
+    "*": allow
+    orchestrator: deny
+    opencode-orchestrator: deny\
+"""
+
+# --- Skill orquestadora ---------------------------------------------------
+
+[skill]
+frontmatter = """
+name: opencode-orchestrator
+description: >-
+  Delegated multi-agent engineering workflow for the optional `orquestador` OpenCode agent: lane
+  triage, plan bundles, specialist dispatch, approval and review gates, remediation, and final
+  synthesis. Use it in every `orquestador` run - direct or delegated by build - and reach for it
+  whenever the work is a genuinely complex multi-wave feature, a broad refactor, a cross-cutting
+  change, or a hard diagnosis, even when the request first sounds small. Do not load it from the
+  default `build` agent or from any specialist subagent.\
+"""

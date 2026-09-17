@@ -1,0 +1,127 @@
+# Adaptador Claude Code.
+#
+# No hay agente orquestador: coordina el hilo principal, al que CLAUDE.md le
+# dice que cargue la skill `orchestrator` cuando el usuario pida orquestar.
+# `advisor` es una tool nativa disponible para el hilo principal y para cada
+# especialista, así que no existe como fichero de agente.
+#
+# `disallowedTools: Agent` es una lista de denegación deliberada: una allowlist
+# en `tools:` excluiría también `advisor` y las tools MCP heredadas.
+
+harness = "claude"
+install_dir = "~/.claude"
+agent_format = "markdown_frontmatter"
+agent_path = "agents/{role}.md"
+skill_path = "skills/{skill}/SKILL.md"
+
+[tokens]
+ORCH_SKILL = "orchestrator"
+WORKFLOW = "orchestrator"
+PARENT = "thread"
+COORDINATOR = "the main Claude Code thread"
+SPAWN = "the Agent tool with the roster name as `subagent_type`"
+RESUME = "`SendMessage` addressed to the recorded agent id"
+OWNER_ID = "agent id"
+ASK_USER = "the `AskUserQuestion` tool"
+PROVENANCE = "engine=claude-code | model=opus | effort=xhigh"
+MODEL_PIN = "a fixed per-role profile declared in each agent file"
+
+COORDINATOR_INTRO = """
+You are the parent coordinator: the main Claude Code thread. You talk to the user, retain
+responsibility for the complete outcome, choose the lightest safe lane, dispatch specialists,
+maintain durable artifacts, enforce approval and quality gates, and report the observed result."""
+ROSTER_ADVISOR = "| `advisor` (native tool) | Read-only second opinion on decisions, risks, and stuck states, available to you and to every specialist | nothing |"
+
+ADVISOR_DELEGATION = """
+You may consult the read-only `advisor` tool, and only at a genuine decision point: you are stuck
+after two failed attempts, or a high-stakes choice your inputs do not settle. It takes no
+parameters and forwards your full transcript automatically, so write the Consultation Brief -
+context, the exact evidence paths, the one question, the constraints - in the message immediately
+before you call it. Every consult is fresh; there is nothing to resume. You have no Agent tool, so
+all other delegation is impossible by construction.\
+"""
+
+ADVISOR_CONTEXT = """
+- The `advisor` tool forwards the caller's full transcript automatically, so the inherited history
+  is authoritative for what happened. The caller states the Consultation Brief (`Context`,
+  `Evidence`, `Question`, `Constraints`) in the message immediately before the call. Do not ask the
+  caller to re-narrate history already visible.
+- As a directly selected primary session, the conversation itself is your context. Answer with the
+  same decision discipline, conversationally.\
+"""
+
+# --- Envoltorios por rol -------------------------------------------------
+# `frontmatter` es el bloque YAML literal entre los `---`. Admite tokens.
+
+[agents.codebase-explorer]
+frontmatter = """
+name: codebase-explorer
+description: "{{DESCRIPTION}}"
+model: sonnet
+effort: high
+color: cyan
+disallowedTools: Agent\
+"""
+
+[agents.integration-researcher]
+frontmatter = """
+name: integration-researcher
+description: "{{DESCRIPTION}}"
+model: sonnet
+effort: high
+color: yellow
+disallowedTools: Agent\
+"""
+
+[agents.implementation-planner]
+frontmatter = """
+name: implementation-planner
+description: "{{DESCRIPTION}}"
+model: opus
+effort: xhigh
+color: blue
+disallowedTools: Agent\
+"""
+
+[agents.root-cause-debugger]
+frontmatter = """
+name: root-cause-debugger
+description: "{{DESCRIPTION}}"
+model: sonnet
+effort: high
+color: orange
+disallowedTools: Agent\
+"""
+
+[agents.task-implementer-bdd]
+frontmatter = """
+name: task-implementer-bdd
+description: "{{DESCRIPTION}}"
+model: opus
+effort: xhigh
+color: green
+disallowedTools: Agent\
+"""
+
+[agents.implementation-reviewer]
+frontmatter = """
+name: implementation-reviewer
+description: "{{DESCRIPTION}}"
+model: opus
+effort: xhigh
+color: purple
+disallowedTools: Agent\
+"""
+
+# --- Skill orquestadora ---------------------------------------------------
+
+[skill]
+frontmatter = """
+name: orchestrator
+description: >-
+  Optional multi-agent engineering workflow. Apply it only when the user asks to orchestrate, invokes
+  it by name, or clearly asks for the multi-agent workflow: the main Claude Code thread then
+  coordinates discovery, external-contract research, planning, BDD implementation, independent
+  review, debugging, and remediation through dedicated specialist subagents. Do not apply it
+  automatically to ordinary engineering work, and never load it from a specialist subagent.\
+"""

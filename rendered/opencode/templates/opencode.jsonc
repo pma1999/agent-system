@@ -1,0 +1,53 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "subagent_depth": 2,
+  "mcp": {
+    "codegraph": {
+      "type": "local",
+      "command": ["codegraph", "serve", "--mcp"],
+      "enabled": true
+    },
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp@latest", "--headless", "--browser", "chromium"],
+      "enabled": true,
+      "timeout": 20000
+    }
+  },
+  "tools": {
+    "playwright_*": false
+  },
+  "agent": {
+    "orchestrator": {
+      "permission": {
+        "skill": {
+          "*": "allow",
+          "opencode-orchestrator": "deny"
+        }
+      }
+    },
+    "build": {
+      "tools": {
+        "playwright_*": true
+      }
+    },
+    "explore": {
+      "disable": true
+    },
+    "general": {
+      "disable": true
+    }
+  },
+  "permission": {
+    "skill": {
+      "*": "allow",
+      "orchestrator": "deny",
+      "opencode-orchestrator": "deny"
+    }
+  },
+  "plugin": [
+    "oh-my-opencode-slim",
+    "./plugin/advisor-context.ts"
+  ],
+  "lsp": true
+}

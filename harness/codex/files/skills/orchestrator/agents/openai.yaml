@@ -1,0 +1,6 @@
+interface:
+  display_name: "Orchestrator"
+  short_description: "Optional multi-agent engineering workflow"
+  default_prompt: "Use $orchestrator to coordinate this engineering task with the lightest safe multi-agent lane."
+policy:
+  allow_implicit_invocation: false

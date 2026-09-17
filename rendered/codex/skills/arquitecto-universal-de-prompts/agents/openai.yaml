@@ -1,0 +1,4 @@
+interface:
+  display_name: "Arquitecto Universal de Prompts"
+  short_description: "Crea y optimiza prompts claros, robustos y portables"
+  default_prompt: "Usa $arquitecto-universal-de-prompts para convertir mi solicitud en un prompt optimizado y listo para copiar."

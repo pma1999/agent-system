@@ -1,0 +1,51 @@
+# Roster canónico del sistema de orquestación.
+#
+# `harnesses` dice en qué instalaciones existe cada rol. Un rol presente en dos
+# o más entra automáticamente en el check de identidad de prompts de
+# `agentsys.py verify`: su cuerpo, una vez quitado el envoltorio del harness,
+# resueltos los bloques de `sections/` y revertida la sustitución de tokens,
+# debe quedar byte-idéntico entre todos ellos.
+#
+# `description` se renderiza en el envoltorio de cada harness, así que también
+# es canónica: admite los mismos tokens que el cuerpo.
+#
+# El modelo y el effort NO viven aquí: son la decisión de cada harness y están
+# en `harness/<h>/adapter.toml`, sección `[agents.<rol>]`.
+
+[[role]]
+name = "codebase-explorer"
+harnesses = ["claude", "codex", "opencode"]
+description = "Use when the {{WORKFLOW}} needs a front-loaded, token-lean map of an unfamiliar code area before planning or implementation. Investigates read-only, writes a context-map artifact with files, symbols, contracts, read-hints, patterns, tests, risks, and unknowns, and never writes production code."
+
+[[role]]
+name = "integration-researcher"
+harnesses = ["claude", "codex", "opencode"]
+description = "Use when the {{WORKFLOW}} needs a current external contract not already proven in the repo: a third-party API, SDK, library, CLI, or scraping target. Verifies the needed surface, writes an Integration Recipe, and never writes production code."
+
+[[role]]
+name = "implementation-planner"
+harnesses = ["claude", "codex", "opencode"]
+description = "Use when the {{WORKFLOW}} needs the design and dispatch-ready plan bundle for a new feature, non-trivial change, or raw idea. Consumes context maps and integration recipes, writes plans/<slug>/ with design, constraints, task briefs, and progress, and never writes production code."
+
+[[role]]
+name = "root-cause-debugger"
+harnesses = ["claude", "codex", "opencode"]
+description = "Use when the {{WORKFLOW}} has a concrete bug, error, failing test, stack trace, or production symptom that needs root-cause diagnosis before implementation. Investigates read-only, produces an evidenced fix direction, and never fixes production code."
+
+[[role]]
+name = "task-implementer-bdd"
+harnesses = ["claude", "codex", "opencode"]
+description = "Use when the {{WORKFLOW}} has one self-contained task brief ready for implementation with Outside-In BDD/TDD. Implements only that scope, writes a task report with evidence and a read ledger, and returns PACK_GAP or NEEDS_CONTEXT instead of broad rediscovery."
+
+[[role]]
+name = "implementation-reviewer"
+harnesses = ["claude", "codex", "opencode"]
+description = "Use when the {{WORKFLOW}} needs an independent task or final review of delegated implementation work, including resumed re-review. Reviews artifacts and diffs, verifies behavior, writes stable finding IDs, updates the same review artifact, and never modifies production code."
+
+# En Claude Code `advisor` es una tool nativa disponible tanto para el hilo
+# principal como para cada especialista, así que allí no existe como fichero de
+# agente. En Codex y OpenCode hace falta el subagente.
+[[role]]
+name = "advisor"
+harnesses = ["codex", "opencode"]
+description = "Use when the {{WORKFLOW}} or one specialist needs an independent second opinion at a genuine decision point: before committing to an approach, when stuck, or at a high-stakes gate. Strictly read-only; reads the referenced evidence itself, returns decision-grade advice, and never writes code or coordinates work."
