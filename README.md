@@ -103,14 +103,20 @@ carpeta viva), `install --dry-run`, `install --force`, `install --retire-legacy`
 
 1. **Render determinista.** `rendered/` es exactamente lo que produce `source/ + harness/`. Detecta
    cualquier edición hecha directamente sobre la salida.
-2. **Identidad de prompts.** Para cada rol presente en ≥2 harnesses (y para la skill): se renderiza
-   el cuerpo con los tokens marcados con un centinela, se quitan los bloques de `sections/` y se
-   exige **igualdad byte a byte** contra el canónico. Es la prueba auditable de que los tres
-   harnesses comparten un solo texto y que la única variación es la declarada arriba. Si un valor de
-   token colisiona con la prosa, este check falla: es intencionado.
-3. **Sintaxis del envoltorio.** Todo TOML de Codex parsea; todo frontmatter YAML está bien formado.
-   `build` además aborta si un cuerpo contiene `'''` o acaba en `\`, que romperían el
-   `developer_instructions` de Codex.
+2. **Identidad de prompts.** Para cada rol presente en ≥2 harnesses, y para la skill, en dos
+   direcciones. *Ida:* se renderiza el cuerpo con los tokens marcados con un centinela, se quitan
+   los bloques de `sections/` y se exige igualdad byte a byte contra el canónico. *Vuelta:* se coge
+   lo realmente renderizado en `rendered/`, se le quita el envoltorio del harness y las secciones, y
+   se revierte la sustitución de tokens, exigiendo otra vez el canónico. La vuelta es la que caza un
+   valor de token que colisione con la prosa: si el mismo texto es a la vez token y palabra del
+   prompt, la inversa sobre-sustituye y el check falla. Es intencionado — ese valor es ambiguo.
+   (Dos tokens con el mismo valor en un harness sí se permiten: se normalizan por valor.)
+3. **Envoltorio: esquema y roster.** Cada harness recibe sólo claves y valores que entiende: alias
+   de modelo, `effort` y color dentro de rango, ningún especialista con la tool `Agent`, el advisor
+   en `read-only`, el `name` coincidiendo con el fichero, la skill con el nombre esperado, el roster
+   cuadrado y ningún artefacto con nombre prohibido. Un valor fuera de rango no da error en el
+   runtime: se ignora en silencio, que es peor. `build` además aborta si un cuerpo contiene `'''` o
+   acaba en `\`, que romperían el `developer_instructions` de Codex.
 4. **Deriva.** Las carpetas vivas coinciden con `rendered/`.
 
 ## Seguridad del despliegue
