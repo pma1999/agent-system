@@ -54,6 +54,36 @@ que aquella invariante protegía de verdad — poder leer literalmente lo que se
 7. `python bin/agentsys.py publish -m "<resumen real>"`.
 8. En los demás PCs: `git pull --ff-only` y `install`.
 
+## Cómo probarlo de verdad
+
+`verify` demuestra que los ficheros son correctos y coherentes. No demuestra que el despacho
+funcione: los permisos por rol (los globs de `edit`, la lista de `task` permitidos) sólo se ejercen
+en ejecución, y un glob mal puesto es invisible para cualquier comprobación estática. Después de
+tocar `adapter.toml`, ejercita al menos el harness afectado.
+
+**OpenCode** es el más fácil de guionizar, y en este equipo corre desde WSL:
+
+```bash
+wsl -e bash -lc '
+  D=/tmp/smoke; rm -rf $D; mkdir -p $D/src; cd $D
+  echo "def doble(x): return x * 2" > src/m.py
+  git init -q . && git add -A && git commit -qm base
+  ~/.opencode/bin/opencode run --agent orquestador "Dispatch exactly one codebase-explorer via the task tool on this repository. Brief it to write its context map to plans/smoke/context-map.md. Do not explore yourself. Report the task_id, the specialist status and whether the file exists."
+  ls -la $D/plans/smoke/
+'
+```
+
+Lo que prueba: que el agente padre carga, que el `task` al especialista está permitido, que el
+especialista puede escribir bajo `plans/**` y que el `task_id` vuelve para la afinidad. Si el
+artefacto no aparece, el sospechoso son los globs de `edit` del adaptador.
+
+**Claude Code** carga `~/.claude/agents/` **al arrancar la sesión**: una sesión ya abierta no ve
+agentes nuevos ni cambios en su frontmatter. Reinicia y lanza una tarea pequeña por el carril Quick.
+`disallowedTools` y `effort` son los dos campos donde un valor equivocado no da error: simplemente no
+hace nada. Las skills sí se recogen en caliente.
+
+**Codex** se ejercita con `codex exec`. Necesita `[features] multi_agent = true` en `config.toml`.
+
 ## Definition of done
 
 - `verify` en verde, incluido el check de identidad de prompts.
