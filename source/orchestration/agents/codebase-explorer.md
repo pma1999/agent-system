@@ -86,5 +86,3 @@ Return only:
 - **Open questions:** only when blocked
 
 Do not paste the context map. The artifact is the source of truth.
-
-<!-- nota de prueba -->
