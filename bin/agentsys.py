@@ -325,10 +325,10 @@ def cmd_install(args: argparse.Namespace) -> int:
               f"{_deploy.live_dir(h)}{sufijo}")
         if refused:
             refused_total += len(refused)
-            print(f"            {len(refused)} rechazados: existen, difieren y nunca "
-                  f"estuvieron gestionados. Revisalos y repite con --force:")
-            for r in refused:
-                print(f"            ! {r}")
+            print(f"            {len(refused)} rechazados, sin tocar. Revisalos y, si quieres "
+                  f"que los sustituya lo generado, repite con --force:")
+            for key, motivo in refused:
+                print(f"            ! {key}  ({motivo})")
         retirados = _deploy.clean_obsolete(h, stamp, args.dry_run)
         if retirados:
             print(f"            {len(retirados)} restos del sistema anterior al backup: "

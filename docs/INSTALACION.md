@@ -33,31 +33,54 @@ Después:
 ## Migrar un PC que ya tenía el sistema antiguo
 
 Los PCs antiguos tienen `~/.claude`, `~/.codex` y `~/.config/opencode` como checkouts de las ramas
-`master` / `codex` / `opencode`. El nuevo sistema los trata como destinos de despliegue.
+`master` / `codex` / `opencode`. El nuevo sistema los trata como destinos de despliegue. Esta
+secuencia está ensayada sobre un HOME temporal con las tres ramas clonadas.
 
 ```bash
-# 1. no pierdas nada que sólo exista en ese PC
-cd ~/.claude          && git status --porcelain
-cd ~/.codex           && git status --porcelain
-cd ~/.config/opencode && git status --porcelain
-# publica o guarda aparte cualquier cambio local antes de seguir
-
-# 2. instala el canon
+# 1. clona el canon
 git clone https://github.com/pma1999/agent-system.git ~/agent-system
 cd ~/agent-system
-python bin/agentsys.py install --dry-run     # revisa la lista, sobre todo los "rechazados"
-python bin/agentsys.py install
 
-# 3. desactiva los checkouts antiguos para que nadie vuelva a publicar por ahí
-python bin/agentsys.py install --retire-legacy
+# 2. mira qué va a pasar, sin tocar nada
+python bin/agentsys.py install --dry-run
 ```
 
-`--retire-legacy` renombra el `.git` de cada carpeta viva a `.git.legacy-agent-system-<fecha>`. No
-borra nada: para revertir, basta renombrarlo de vuelta.
+Lee la salida del ensayo. Lo que importa son los **rechazados**, que vienen con su motivo:
 
-Durante la migración, `install` considera "gestionado" todo lo que el checkout antiguo tuviera
-trackeado, así que lo sobrescribe con normalidad. Lo que **no** estuviera en git y difiera aparece
-como **rechazado** y no se toca hasta que decidas.
+- `nunca estuvo gestionado` — un fichero tuyo que el sistema no puso ahí.
+- `cambio local sin publicar` — trabajo que ese PC tenía en su checkout y **nunca subió**. Esto es
+  lo único que la migración puede hacerte perder de vista, así que míralo antes de seguir:
+  `git -C ~/.codex diff -- <fichero>`.
+
+Decide qué hacer con cada uno: guardarlo aparte, llevarlo al canon, o dejar que lo sustituya lo
+generado. Nada se toca hasta que lo digas.
+
+```bash
+# 3. instala. Añade --force solo si ya revisaste los rechazados y quieres sustituirlos
+python bin/agentsys.py install
+
+# 4. desactiva los checkouts antiguos para que nadie vuelva a publicar por ahí
+python bin/agentsys.py install --retire-legacy
+
+# 5. comprueba
+python bin/agentsys.py verify
+```
+
+Qué hace la migración, exactamente:
+
+- Despliega el sistema completo, incluido el lado Claude, que en esas ramas estaba borrado.
+- **Conserva el estado de máquina.** Las plantillas se fusionan de forma aditiva: tu
+  `settings.json` mantiene tema, modelo y ajustes propios, y sólo recibe las claves del sistema que
+  le falten. Igual con `config.toml`, `opencode.jsonc` y `opencode.v2.jsonc`.
+- Respalda cada fichero que reemplaza en `~/.agent-system-backups/<fecha>/`.
+- Retira al backup, bajo `_obsoleto/`, los restos del sistema anterior: `skills/orchestrator.zip`,
+  las `references/` y `scripts/` del orchestrator de Codex, el planner `claude-host`, `prompts/` de
+  OpenCode, `switch-models.sh` y `model-profiles/`. Es una **lista exacta**, nunca un patrón.
+- `--retire-legacy` renombra el `.git` de cada carpeta viva a `.git.legacy-agent-system-<fecha>`.
+  No borra nada: para revertir, basta renombrarlo de vuelta.
+
+`~/.claude/install.ps1` se sustituye por un stub que redirige aquí y sale con código 1, para que
+lanzarlo por costumbre no vuelva a tirar de las ramas congeladas.
 
 ## OpenCode dentro de WSL
 

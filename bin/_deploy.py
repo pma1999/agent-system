@@ -84,6 +84,24 @@ def git_tracked(live: Path) -> set[str]:
             for line in out.splitlines() if line.strip()}
 
 
+def git_dirty(live: Path) -> set[str]:
+    """Ficheros trackeados y MODIFICADOS en un checkout legacy.
+
+    Estar en git es lo que hace que un fichero cuente como "nuestro" y se pueda
+    sobrescribir. Pero si ademas esta modificado, es trabajo que ese PC nunca
+    publico: deja de contar como nuestro y se reporta en vez de pisarse.
+    """
+    if not (live / ".git").exists():
+        return set()
+    try:
+        out = subprocess.run(["git", "-C", str(live), "status", "--porcelain",
+                              "--untracked-files=no"],
+                             capture_output=True, text=True, check=True).stdout
+    except Exception:  # noqa: BLE001
+        return set()
+    return {line[3:].strip().strip('"') for line in out.splitlines() if line.strip()}
+
+
 def norm(rel: Path) -> str:
     return str(rel).replace("\\", "/")
 
@@ -92,7 +110,8 @@ def install_harness(h: Harness, force: bool, dry: bool, stamp: str) -> tuple[int
     live = live_dir(h)
     base = RENDERED / h.name
     live.mkdir(parents=True, exist_ok=True)
-    owned = read_manifest(live) | {norm(Path(p)) for p in git_tracked(live)}
+    sucios = {norm(Path(x)) for x in git_dirty(live)}
+    owned = (read_manifest(live) | {norm(Path(x)) for x in git_tracked(live)}) - sucios
     written, refused = 0, []
     installed: list[str] = []
 
@@ -103,7 +122,9 @@ def install_harness(h: Harness, force: bool, dry: bool, stamp: str) -> tuple[int
             if dst.read_bytes() == src.read_bytes():
                 continue
             if key not in owned and not force:
-                refused.append(key)
+                motivo = ("cambio local sin publicar" if key in sucios
+                          else "nunca estuvo gestionado")
+                refused.append((key, motivo))
                 continue
             if not dry:
                 bak = backups() / stamp / h.name / rel
