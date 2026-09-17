@@ -188,9 +188,35 @@ Arial, A4) y separa diseño (estable) de contenido (por oferta).
    ```bash
    bash to_pdf.sh CV_Pablo_Miguel_Argudo_<Puesto>.docx
    ```
-   `to_pdf.sh` usa LibreOffice (`soffice`). Si no está: `apt-get install -y libreoffice-writer`.
+   `to_pdf.sh` usa LibreOffice (`soffice`). Si `soffice` no está disponible o falla,
+   no detenerse ni entregar un PDF sin verificar: elegir la mejor vía alternativa
+   disponible en ese entorno (otro conversor DOCX→PDF instalado, exportación del
+   motor documental o reconstrucción controlada con una herramienta PDF como
+   ReportLab/HTML-CSS cuando preserve mejor la identidad visual). Reutilizar el
+   contenido aprobado y mantener, en la medida posible, la identidad navy/azul/gris,
+   Arial y A4. Si se usa una vía alternativa, renderizar el PDF resultante a PNG,
+   inspeccionar todas sus páginas y corregir cualquier desbordamiento, salto
+   extraño, fuente sustituida, solapamiento o pérdida de contenido antes de
+   entregarlo.
 
 4. Guarda ambos en la carpeta de salida del usuario y preséntalos.
+
+### Fallback de dependencias y criterio de calidad
+
+- Priorizar el método que produzca el resultado más fiel y verificable para cada
+  formato y entorno; no convertir la disponibilidad de una herramienta concreta
+  en un bloqueo automático.
+- Cuando falte una dependencia, probar alternativas seguras y disponibles antes
+  de abandonar: otro conversor compatible, un generador PDF controlado o una
+  representación equivalente que conserve el contenido, la jerarquía y la
+  identidad visual.
+- Verificar siempre el resultado final: renderizar los PDF a imágenes e
+  inspeccionar todas las páginas; validar estructuralmente los DOCX. Si no es
+  posible renderizar el DOCX por una dependencia ausente, indicarlo con claridad
+  y no afirmar que superó la revisión visual.
+- No entregar archivos defectuosos, incompletos o con una fidelidad visual
+  insuficiente. Iterar, cambiar de método o explicar el bloqueo real; nunca
+  ocultar una limitación de QA.
 
 **Encaje en una página:** por defecto el CV cabe en 2 páginas como los actuales.
 Si la oferta o el sector piden 1 página, poda a las experiencias y logros más
@@ -220,6 +246,8 @@ piel del reclutador más escéptico: ¿qué objeción pondría? ¿está neutrali
 
 - `references/perfil-maestro.md` — fuente de verdad (hechos + 3 ángulos + zonas grises).
 - `references/playbooks.md` — tácticas por entregable.
+- `references/sistema-orquestacion-multiagente.md` — descripción completa del sistema propio de orquestación multiagente; léela cuando la candidatura sea de agentes IA, plataforma, software engineering/developer productivity o cuando se prepare una entrevista/portfolio técnico sobre esta capacidad.
 - `scripts/build_cv.js` — motor (esquema de datos documentado dentro).
 - `scripts/cv_data.example.js`, `scripts/letter_data.example.js` — ejemplos reales.
 - `scripts/to_pdf.sh` — conversión DOCX→PDF fiel.
+- `references/agent-studio.md` — ficha completa del proyecto propio Agent Studio; léela para candidaturas de AI platform, agentes IA, backend/full-stack, developer productivity o portfolio técnico.

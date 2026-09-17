@@ -38,6 +38,12 @@ imprescindible. Trabaja de arriba abajo por impacto.
 6. **Palabras clave (ATS + humano):** usa los términos exactos del anuncio cuando
    describan algo real de Pablo (p. ej. "doble materialidad", "RAG", "análisis
    de políticas"). Sin listas artificiales.
+   En candidaturas de agentes IA, plataforma o software engineering puede
+   usarse el sistema propio de orquestación multiagente como una prueba breve de
+   desarrollo aumentado por GenAI y de disciplina de ingeniería: normalmente
+   basta una línea en el perfil/competencias y un bullet en proyectos o
+   experiencia técnica. No lo conviertas en el tema dominante del CV ni lo
+   presentes como producto comercial o implantación de cliente sin confirmación.
 7. **Longitud:** 2 páginas por defecto (como los CVs actuales); 1 página si el
    sector/oferta lo pide, podando contenido, nunca encogiendo la tipografía.
 8. **Genera Word + PDF** con el motor (ver `../SKILL.md` §Motor).
