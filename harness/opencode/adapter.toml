@@ -10,6 +10,12 @@ agent_format = "markdown_frontmatter"
 agent_path = "agents/{role}.md"
 skill_path = "skills/{skill}/SKILL.md"
 
+obsolete = [
+  "prompts",
+  "scripts/switch-models.sh",
+  "model-profiles",
+]
+
 [tokens]
 ORCH_SKILL = "opencode-orchestrator"
 WORKFLOW = "orquestador"

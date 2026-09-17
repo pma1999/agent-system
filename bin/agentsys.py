@@ -329,6 +329,10 @@ def cmd_install(args: argparse.Namespace) -> int:
                   f"estuvieron gestionados. Revisalos y repite con --force:")
             for r in refused:
                 print(f"            ! {r}")
+        retirados = _deploy.clean_obsolete(h, stamp, args.dry_run)
+        if retirados:
+            print(f"            {len(retirados)} restos del sistema anterior al backup: "
+                  f"{', '.join(retirados)}")
         for line in _deploy.merge_templates(h, args.dry_run):
             print(f"            {line}")
         if args.retire_legacy:

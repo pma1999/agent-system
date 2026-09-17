@@ -47,6 +47,7 @@ class Harness:
     tokens: dict[str, str]
     agents: dict[str, dict]
     skill_frontmatter: str
+    obsolete: list[str]
     files_dir: Path = field(init=False)
 
     def __post_init__(self) -> None:
@@ -73,6 +74,7 @@ def load_harnesses() -> dict[str, Harness]:
             tokens=data.get("tokens", {}),
             agents=data.get("agents", {}),
             skill_frontmatter=data.get("skill", {}).get("frontmatter", ""),
+            obsolete=data.get("obsolete", []),
         )
     return out
 

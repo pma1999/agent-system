@@ -129,6 +129,22 @@ def install_harness(h: Harness, force: bool, dry: bool, stamp: str) -> tuple[int
     return written, refused
 
 
+def clean_obsolete(h: Harness, stamp: str, dry: bool) -> list[str]:
+    """Retira restos del sistema anterior, SOLO los de la lista exacta del
+    adaptador. Nunca se borra: se mueve al backup."""
+    live, out = live_dir(h), []
+    for rel in h.obsolete:
+        p = live / rel
+        if not p.exists():
+            continue
+        out.append(rel)
+        if not dry:
+            dest = backups() / stamp / h.name / "_obsoleto" / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(p), str(dest))
+    return out
+
+
 def retire_legacy(h: Harness, stamp: str, dry: bool) -> str | None:
     live = live_dir(h)
     g = live / ".git"
@@ -237,8 +253,15 @@ def _strip_jsonc(text: str) -> str:
 
 def merge_jsonc(target: Path, template: Path, dry: bool) -> int:
     """Insercion textual: conserva comentarios y formato del fichero del usuario."""
-    if not template.exists() or not target.exists():
-        return merge_json(target, template, dry) if template.exists() else 0
+    if not template.exists():
+        return 0
+    if not target.exists():
+        # Maquina nueva: se copia la plantilla tal cual, con sus comentarios.
+        # Parsearla como JSON puro aqui fallaba, porque es JSONC.
+        if not dry:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(template, target)
+        return 1
     tpl = json.loads(_strip_jsonc(template.read_text(encoding="utf-8")))
     raw = target.read_text(encoding="utf-8")
     cur = json.loads(_strip_jsonc(raw))

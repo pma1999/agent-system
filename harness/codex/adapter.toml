@@ -11,6 +11,13 @@ agent_format = "toml_developer_instructions"
 agent_path = "agents/{role}.toml"
 skill_path = "skills/{skill}/SKILL.md"
 
+obsolete = [
+  "skills/orchestrator.zip",
+  "skills/orchestrator/references",
+  "skills/orchestrator/scripts",
+  "agents/implementation-planner-claude-host.toml",
+]
+
 [tokens]
 ORCH_SKILL = "orchestrator"
 WORKFLOW = "orchestrator"

@@ -14,6 +14,12 @@ agent_format = "markdown_frontmatter"
 agent_path = "agents/{role}.md"
 skill_path = "skills/{skill}/SKILL.md"
 
+# Restos del sistema anterior. Lista EXACTA: `install` los mueve al backup si
+# existen. Nunca se amplia a patrones ni a rutas arbitrarias.
+obsolete = [
+  "patches/agent-parity-check.mjs",
+]
+
 [tokens]
 ORCH_SKILL = "orchestrator"
 WORKFLOW = "orchestrator"
