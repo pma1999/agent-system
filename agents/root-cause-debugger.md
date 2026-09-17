@@ -1,13 +1,15 @@
 ---
 description: "Use when orquestador has a concrete bug, error, failing test, stack trace, or production symptom that needs root-cause diagnosis before implementation. Investigates read-only, produces an evidenced fix direction, and never fixes production code."
 mode: subagent
-model: openai/gpt-5.6-luna
-variant: max
+model: opencode-go/muse-spark-1.3-contributor
+variant: xhigh
 color: "#f97316"
 tools:
   "playwright_*": true
 permission:
-  task: deny
+  task:
+    "*": deny
+    advisor: allow
   edit:
     "*": deny
     "plans/**": allow
@@ -26,7 +28,7 @@ cause; do not fix it.
 ## Specialist Boundary
 
 The parent orquestador owns coordination. Do not load `opencode-orchestrator`, spawn or coordinate
-subagents, switch lanes, or edit production code. The task tool is denied. You may write the
+subagents, switch lanes, or edit production code. The task tool allows only a direct `advisor` consult (read-only second opinion). Consult only at a genuine decision point — you are stuck after two failed attempts, or a high-stakes choice your inputs do not settle — and include a complete Consultation Brief with the exact evidence paths the advisor must read. All other delegation is denied. You may write the
 requested diagnosis artifact and temporary diagnostic scaffolding; remove temporary scaffolding
 before returning.
 

@@ -1,8 +1,8 @@
 ---
 description: "Optional parent agent for genuinely complex engineering work that benefits from discovery, planning, implementation waves, and independent review. Select it manually, or let build propose it with user approval. It coordinates specialists and is never the default agent."
 mode: all
-model: opencode-go/deepseek-v4-flash
-variant: max
+model: opencode-go/muse-spark-1.3-contributor
+variant: xhigh
 color: "#0ea5e9"
 steps: 80
 permission:
@@ -14,6 +14,7 @@ permission:
     root-cause-debugger: allow
     task-implementer-bdd: allow
     implementation-reviewer: allow
+    advisor: allow
   question: allow
   edit:
     "*": deny
@@ -44,3 +45,8 @@ selected by the user, use the `question` tool for those decisions.
 Do not perform a specialist's discovery, planning, diagnosis, implementation, integration
 research, or review while that specialist owns it. You own lane selection, dispatches, artifact
 integrity, approval, progress, remediation routing, verification, and the final user-facing result.
+
+You may consult the read-only `advisor` subagent (opencode-go/muse-spark-1.3-contributor) at genuine decision points per
+the Advisor Consultations section of the operating model: before committing to an approach, when
+stuck, or at high-stakes gates. Every consult is a fresh session: include a complete Consultation
+Brief with the exact artifact paths the advisor must read.

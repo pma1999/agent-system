@@ -1,4 +1,4 @@
-# Sistema global de ingenieria para OpenCode
+# Configuracion global de OpenCode
 
 Checkout sincronizado en `~/.config/opencode` mediante la rama `opencode` de
 `pma1999/agent-system`. El instalador es `~/.claude/install.ps1` y tambien puede ejecutarse mediante
@@ -16,93 +16,86 @@ pwsh -NoProfile -File "$env:TEMP\agent-system\install.ps1"
 
 El instalador prepara conjuntamente `~/.claude`, `~/.codex` y `~/.config/opencode`, conserva copias
 de seguridad de los archivos preexistentes que pudiera sustituir y fusiona las plantillas
-conservando preferencias locales. Solo aplica migraciones concretas necesarias para el sistema,
-como elevar `subagent_depth` de `1` a `2`. Para actualizar posteriormente desde cualquier PC:
+conservando preferencias locales. Las credenciales y la configuracion personalizada de
+`oh-my-opencode-slim.json` son locales y no se sincronizan.
+
+Para actualizar posteriormente desde cualquier PC:
 
 ```powershell
 pwsh -NoProfile -File "$HOME/.claude/install.ps1"
 ```
 
-Las credenciales no se sincronizan. Hay que iniciar sesion en OpenCode y sus proveedores de modelos
-en cada maquina. Si OpenCode se ejecuta en WSL, aplica tambien los puentes de la seccion WSL.
-
 ## Flujo predeterminado
 
-El agente predeterminado es explicitamente `build`. Su politica vive en `AGENTS.md`: trabajo
-directo, verificacion con las herramientas del proyecto y delegacion acotada a `explore`,
-`diff-review` y `consult`. Restaurar el sistema multiagente no cambia ese comportamiento.
+`oh-my-opencode-slim` proporciona el agente predeterminado `orchestrator` y sus especialistas
+`oracle`, `council`, `librarian`, `explorer`, `designer`, `fixer` y `observer`. La instalacion se
+registra sin fijar version en `opencode.jsonc`, por lo que carga la ultima version compatible del
+paquete.
 
-- `explore` - exploracion integrada, fijada al modelo principal y con 25 pasos.
-- `diff-review` - revision limpia del diff; verifica sin modificar codigo ni estado de git.
-- `consult` - consulta puntual a un modelo mas fuerte; verifica sin modificar codigo.
-- `review` - respaldo del comando `/review`; revisa cambios sin tocarlos.
-- `prompts/` - contratos de `diff-review`, `consult` y `review`.
+La configuracion local restaurada vive en `oh-my-opencode-slim.json`:
 
-Los agentes de revision pueden usar terminal y escribir sondas solo bajo `/tmp/opencode/`, con
-limpieza obligatoria. No pueden modificar el proyecto, cambiar git, instalar paquetes, usar
-`sudo` ni ejecutar formateadores in-place.
+- preset activo `hybrid-optimal`;
+- presets alternativos `openai-optimal` y `opencode-go-optimal`;
+- Observer habilitado y enrutado automaticamente para imagenes;
+- Council `quality-price` con perfiles pragmatist, architect y critic;
+- multiplexer automatico con layout `main-vertical` y panel principal al 60%;
+- skills y MCP asignados por agente, con `websearch` moderno habilitado para Librarian.
 
-## Orquestador opcional
+No existe un `AGENTS.md` global ni los antiguos agentes inline `consult`, `diff-review` y `review`,
+sus prompts o el comando `/review`.
 
-`orquestador` es un agente padre opcional, nunca el predeterminado. Se activa de dos formas:
+## Orquestador alternativo conservado
 
-1. El usuario lo selecciona directamente en el selector de agentes de OpenCode.
-2. `build` propone delegarle una tarea genuinamente compleja y el usuario aprueba el `task`.
+`orquestador` es un sistema independiente y opcional, distinto del `orchestrator` de OMO. Se
+selecciona manualmente en OpenCode cuando se necesita su flujo de discovery, planificacion,
+implementacion BDD por olas y revision independiente. No es el agente predeterminado.
 
-La segunda ruta envia `Invocation: delegated-by-build`. `orquestador` conserva la propiedad del
-trabajo y, cuando necesita aprobacion o una decision de producto, devuelve
-`STATUS: NEEDS_USER_DECISION`; `build` pregunta al usuario y reanuda el mismo `task_id`.
+El sistema conservado vive en:
 
-No se usa para cambios pequenos. Esta pensado para varias olas de implementacion, refactors
-amplios entre subsistemas, contratos publicos acoplados, diagnosticos dificiles y cambios
-transversales de migracion o seguridad.
+- `agents/orquestador.md` - agente padre seleccionable;
+- `skills/opencode-orchestrator/SKILL.md` - triage, artefactos, aprobaciones, olas y recuperacion;
+- `agents/codebase-explorer.md` - mapa inicial del repositorio;
+- `agents/integration-researcher.md` - contrato externo verificado;
+- `agents/implementation-planner.md` - diseno y briefs ejecutables;
+- `agents/root-cause-debugger.md` - diagnostico causal sin implementar;
+- `agents/task-implementer-bdd.md` - especialista que escribe codigo de produccion;
+- `agents/implementation-reviewer.md` - revision independiente por tarea o final;
+- `agents/advisor.md` - consultor read-only de segundo criterio (GPT-5.6 Sol);
+- `plugin/advisor-context.ts` - inyecta el transcript completo del consultante en cada consulta
+  a `advisor`.
 
-El sistema vive en:
-
-- `agents/orquestador.md` - agente padre seleccionable y delegable.
-- `skills/opencode-orchestrator/SKILL.md` - triage, artefactos, aprobaciones, olas, revisiones y
-  recuperacion ante bloqueos.
-- `agents/codebase-explorer.md` - mapa inicial del repositorio.
-- `agents/integration-researcher.md` - contrato externo verificado.
-- `agents/implementation-planner.md` - diseno y briefs ejecutables.
-- `agents/root-cause-debugger.md` - diagnostico causal sin implementar.
-- `agents/task-implementer-bdd.md` - unico especialista que escribe codigo de produccion.
-- `agents/implementation-reviewer.md` - revision independiente por tarea o final.
-
-`subagent_depth` vale `2` para permitir `build -> orquestador -> especialista`. Todos los
-especialistas tienen `task: deny`, por lo que no existe un tercer nivel ni recursion accidental.
-`build` no puede cargar la skill multiagente, no puede invocar directamente a los especialistas y
-su permiso para invocar `orquestador` es `ask`. El padre y los especialistas sin codigo solo pueden
-editar `plans/**` y `/tmp/opencode/**`; `task-implementer-bdd` conserva la escritura de produccion.
+`subagent_depth` se mantiene en `2`. Los especialistas solo pueden consultar `advisor` via la
+task tool; todo lo demas queda denegado, por lo que no existe recursion accidental. La skill
+Claude `orchestrator` sigue denegada para evitar activar el runtime equivocado. OMO tiene
+denegada `opencode-orchestrator`; esa skill queda disponible solo para el `orquestador`
+conservado.
 
 ## Configuracion
 
-MCP Playwright esta desactivado globalmente para ahorrar contexto y se habilita solo en los
-agentes que lo necesitan. La skill Claude `orchestrator` sigue denegada para evitar activar el
-runtime equivocado; la skill propia de OpenCode es `opencode-orchestrator`.
+`templates/opencode.jsonc` instala por merge los MCP sincronizados, el plugin OMO, LSP y los ajustes
+necesarios para conservar el orquestador alternativo. MCP con autenticacion, rutas locales y otras
+preferencias de maquina permanecen solo en el `opencode.jsonc` runtime.
 
-`templates/opencode.jsonc` instala valores sincronizados mediante merge aditivo y migraciones
-obligatorias acotadas. MCP con autenticacion, rutas locales y preferencias de maquina permanecen
-solo en el `opencode.jsonc` runtime.
+MCP Playwright esta desactivado globalmente para ahorrar contexto y se habilita en `build` y en los
+agentes conservados que lo declaran. OMO controla los permisos de sus propios agentes.
 
 ## Modelos
 
 | Componente | Modelo | Variante | Proveedor |
 | --- | --- | --- | --- |
-| `build` / principal | DeepSeek V4 Flash | `max` | OpenCode Go |
-| `small_model` | DeepSeek V4 Flash Free | - | OpenCode |
-| `explore` | DeepSeek V4 Flash | `max` | OpenCode Go |
-| `diff-review` | GPT-5.6 Luna | `max` | OpenAI OAuth |
-| `consult` | GPT-5.6 Sol | `xhigh` | OpenAI OAuth |
-| `review` | DeepSeek V4 Flash (default) | `max` | OpenCode Go |
+| OMO `orchestrator`, `explorer`, `librarian`, `designer`, `fixer` | DeepSeek V4 Flash | `max` | OpenCode Go |
+| OMO `oracle` | DeepSeek V4 Pro | `max` | OpenCode Go |
+| OMO `council` | DeepSeek V4 Pro | `max` | OpenCode Go |
+| OMO `observer` | MiMo V2.5 | - | OpenCode Go |
 | `orquestador` | DeepSeek V4 Flash | `max` | OpenCode Go |
 | `codebase-explorer` / `task-implementer-bdd` | DeepSeek V4 Flash | `max` | OpenCode Go |
-| `implementation-planner` | GPT-5.6 Sol | `xhigh` | OpenAI OAuth |
+| `implementation-planner` | GPT-5.6 Sol | `high` | OpenAI OAuth |
+| `advisor` | GPT-5.6 Sol | `high` | OpenAI OAuth |
 | `integration-researcher` / `root-cause-debugger` / `implementation-reviewer` | GPT-5.6 Luna | `max` | OpenAI OAuth |
 
 ## WSL
 
-OpenCode en WSL lee configuración y skills externas desde el home de Linux. Puentes de una sola vez:
+OpenCode en WSL lee configuracion y skills externas desde el home de Linux. Puentes de una sola vez:
 
 ```bash
 ln -s /mnt/c/Users/<usuario-windows>/.config/opencode ~/.config/opencode
