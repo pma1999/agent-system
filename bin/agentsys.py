@@ -21,7 +21,9 @@ import tomllib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _core  # noqa: E402
 import _deploy  # noqa: E402
+import _schema  # noqa: E402
 from _core import (  # noqa: E402
     ANCHOR_RE, BuildError, Harness, RENDERED, ROOT, Role, SOURCE, copy_tree,
     load_harnesses, load_roles, render_body, wrap_agent,
@@ -119,6 +121,55 @@ def strip_sections(src: Path, text: str, h: Harness) -> str:
     return text
 
 
+def unwrap(h: Harness, text: str) -> str:
+    """Quita el envoltorio del harness y devuelve el cuerpo del prompt."""
+    if h.agent_format == "toml_developer_instructions" and "developer_instructions = '''" in text:
+        body = text.split("developer_instructions = '''", 1)[1]
+        return body.rsplit("'''", 1)[0]
+    if text.startswith("---" + NL):
+        return text.split(NL + "---" + NL, 1)[1].lstrip(NL)
+    return text
+
+
+def value_markers(h: Harness) -> dict[str, str]:
+    """Un marcador por VALOR distinto, no por nombre de token.
+
+    Dos tokens con el mismo valor en un harness son indistinguibles al hacer la
+    vuelta (en Claude, ORCH_SKILL y WORKFLOW valen ambos "orchestrator"), asi que
+    se normalizan al mismo marcador en los dos lados de la comparacion.
+    """
+    out, n = {}, {}
+    for name in sorted(h.tokens):
+        v = h.tokens[name]
+        if not v:
+            continue
+        if v not in n:
+            n[v] = f"⟦v{len(n)}⟧"
+        out[name] = n[v]
+    return out
+
+
+def detokenize(h: Harness, text: str) -> str:
+    """Sustitucion inversa: cada valor de token vuelve a su marcador.
+
+    Si el valor de un token coincide ademas con prosa del cuerpo canonico, la
+    inversa sobre-sustituye y la comparacion falla. Es intencionado: ese valor es
+    ambiguo y hay que elegir otro.
+    """
+    marks = value_markers(h)
+    for name in sorted(h.tokens, key=lambda k: -len(h.tokens[k])):
+        v = h.tokens[name]
+        if v:
+            text = text.replace(v, marks[name])
+    return text
+
+
+def marked_canonical(h: Harness, raw: str) -> str:
+    marks = value_markers(h)
+    from _core import TOKEN_RE
+    return TOKEN_RE.sub(lambda m: marks.get(m.group(1), m.group(0)), raw)
+
+
 def identity_targets(roles: list[Role], harnesses: dict[str, Harness]):
     for r in roles:
         if len(r.harnesses) >= 2:
@@ -156,36 +207,65 @@ def cmd_verify(args: argparse.Namespace) -> int:
             errors += 1
             continue
         base = canonical_of(src)
+        raw = drop_anchors(src.read_text(encoding="utf-8"))
         bad = []
         for h in hs:
             got = strip_sections(src, render_body(src, h, neutral=True), h)
             if got != base:
-                bad.append((h.name, got))
+                bad.append((h.name, got, base))
+                continue
+            # vuelta completa desde lo realmente renderizado e instalable
+            out = (RENDERED / h.name /
+                   (agent_out_path(h, name).relative_to(RENDERED / h.name) if name != "SKILL"
+                    else skill_out_path(h).relative_to(RENDERED / h.name)))
+            if out.exists():
+                back = detokenize(h, strip_sections(src, unwrap(h, out.read_text(encoding="utf-8")), h))
+                if back.rstrip(NL) != marked_canonical(h, raw).rstrip(NL):
+                    bad.append((h.name + " (vuelta desde rendered/)", back,
+                                marked_canonical(h, raw)))
         if bad:
             errors += 1
             fail(f"{name}: el cuerpo no es identico en {', '.join(b[0] for b in bad)}")
-            d = difflib.unified_diff(base.splitlines(), bad[0][1].splitlines(),
+            d = difflib.unified_diff(bad[0][2].splitlines(), bad[0][1].splitlines(),
                                      "canonico", bad[0][0], lineterm="", n=1)
             print(NL.join(list(d)[:24]))
         else:
             ok(f"{name}: identico en {', '.join(x.name for x in hs)}")
 
-    print("3. Sintaxis del envoltorio")
+    print("3. Envoltorio: esquema y roster")
     before = errors
     for h in harnesses.values():
-        for p in sorted((RENDERED / h.name).rglob("*.toml")):
-            try:
-                tomllib.loads(p.read_text(encoding="utf-8"))
-            except Exception as e:  # noqa: BLE001
-                fail(f"{h.name}/{p.name}: TOML invalido: {e}")
+        pattern, checker = _schema.CHECKERS[h.name]
+        esperados = {r.name for r in roles if h.name in r.harnesses}
+        if h.name == "opencode":
+            esperados |= {"orquestador"}          # agente padre, exclusivo de OpenCode
+        vistos = set()
+        for p in sorted((RENDERED / h.name).glob(pattern)):
+            vistos.add(p.stem)
+            for msg in checker(p):
+                fail(f"{h.name}/{msg}")
                 errors += 1
-        for p in sorted((RENDERED / h.name).glob("agents/*.md")):
-            t = p.read_text(encoding="utf-8")
-            if not t.startswith("---" + NL) or (NL + "---" + NL) not in t:
-                fail(f"{h.name}/{p.name}: frontmatter ausente o malformado")
+        if vistos != esperados:
+            fail(f"{h.name}: roster descuadrado. sobran={sorted(vistos - esperados)} "
+                 f"faltan={sorted(esperados - vistos)}")
+            errors += 1
+        skill = skill_out_path(h)
+        if not skill.exists():
+            fail(f"{h.name}: falta la skill orquestadora en {skill.name}")
+            errors += 1
+        else:
+            fm = _schema.frontmatter(skill.read_text(encoding="utf-8"))
+            if fm.get("name") != h.tokens["ORCH_SKILL"]:
+                fail(f"{h.name}: la skill se llama {fm.get('name')!r}, "
+                     f"se esperaba {h.tokens['ORCH_SKILL']!r}")
+                errors += 1
+        for p in sorted((RENDERED / h.name).rglob("*.md")):
+            base = p.stem.lower()
+            if any(base.startswith(x) for x in _core.FORBIDDEN_ARTIFACT_PREFIXES)                     and "skills" not in p.parts:
+                fail(f"{h.name}/{p.name}: nombre de artefacto prohibido")
                 errors += 1
     if errors == before:
-        ok("TOML y frontmatter validos en los tres harnesses")
+        ok("esquema por harness, roster y nombres correctos")
 
     print("4. Deriva respecto a las carpetas vivas")
     for h in harnesses.values():

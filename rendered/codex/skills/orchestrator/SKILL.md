@@ -303,7 +303,7 @@ explorer pass; no new public contract, migration, security boundary, or cross-ta
 roughly three or fewer files expected.
 
 1. Create `plans/quick-<slug>/brief.md` using the planner's task-brief schema. This is a handoff of
-   requirements, pointers, constraints, tests, and risks, not an orchestrator-authored design.
+   requirements, pointers, constraints, tests, and risks, not a coordinator-authored design.
 2. Run one focused explorer first only when the touch set is not confidently known.
 3. Capture baseline and dirty-worktree metadata.
 4. Dispatch one `task-implementer-bdd` with brief and report paths.
