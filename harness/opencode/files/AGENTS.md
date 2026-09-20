@@ -135,3 +135,21 @@ If a command fails with a quota error, inform the user and suggest `npx ctx7@lat
 Before changing the orchestration installation (`agents/`, `skills/opencode-orchestrator/`,
 `plugin/advisor-context.ts`), read the README of the canonical source at `~/agent-system`. Those
 files are generated from it: editing them here is overwritten on the next install.
+
+# Frontend and UI work
+
+For any work that touches a user-facing surface - a page, component, layout, screen, dashboard, or
+visual design - load the `frontend` skill. It is installed in every harness and it sets the visual,
+UX and accessibility bar the work must meet: mode (extend an existing design language or redesign),
+art direction, tokens and theming including dark mode, dense product surfaces, the state matrix,
+motion, and the checks the result has to pass. Load it **both when planning and when implementing**,
+never just one.
+
+Load on top of it whatever else this environment offers that matches the stack or the design system
+- framework skills, design-system skills, documentation skills. `frontend` is the floor, not the
+ceiling.
+
+A Playwright MCP server and a Chrome DevTools MCP server are installed and available to every agent.
+Neither is the default: pick whichever fits what you need to see. Use one of them to look at what
+you built before calling it done - a diff cannot show contrast, focus order, layout at 375px,
+console errors, or layout shift.

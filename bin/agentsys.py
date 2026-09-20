@@ -86,6 +86,14 @@ def write_tree(h: Harness, files: dict[Path, str]) -> None:
         for d in sorted(shared.iterdir()):
             if d.is_dir():
                 copy_tree(d, base / "skills" / d.name)
+    # Scripts de la skill orquestadora: viven junto a su cuerpo canonico y
+    # viajan dentro de la skill, que es lo unico que los tres harnesses
+    # instalan igual. La carpeta destino depende del nombre de la skill en
+    # cada harness (ORCH_SKILL), no es fija.
+    skill_scripts = SKILL_SRC.parent / "scripts"
+    if skill_scripts.exists():
+        dest = base / Path(h.skill_path.format(skill=h.tokens["ORCH_SKILL"])).parent / "scripts"
+        copy_tree(skill_scripts, dest)
     if h.files_dir.exists():
         copy_tree(h.files_dir, base)
 

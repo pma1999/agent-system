@@ -43,6 +43,7 @@ mismo texto, y `verify` lo demuestra en cada ejecución.
 | `PROVENANCE` | `engine=claude-code \| model=opus` | `engine=codex \| model=gpt-5.6-sol` | `engine=opencode \| model=muse-spark-1.3` |
 | `MODEL_PIN` | perfil por rol en cada fichero | perfil por rol en cada TOML | roster entero a muse-spark-1.3/xhigh |
 | `MODEL` / `EFFORT` | por rol, en `[agents.<rol>]` | idem, se renderiza como `model_reasoning_effort` | idem, se renderiza como `variant` |
+| `BUNDLE_LINT` | `python ~/.claude/skills/orchestrator/scripts/bundle_lint.py` | `python ~/.codex/skills/orchestrator/scripts/bundle_lint.py` | `python ~/.config/opencode/skills/opencode-orchestrator/scripts/bundle_lint.py` |
 
 **Bloques exclusivos** (secciones enteras, no tokens; viven en
 `source/orchestration/skill/sections/`):
@@ -54,6 +55,39 @@ mismo texto, y `verify` lo demuestra en cada ejecución.
 | `advisor` | brief antes de la llamada, sin reanudación | fork del hilo | plugin de inyección de transcripción |
 | `outbound-status` | — | — | `NEEDS_USER_DECISION` hacia `build` |
 | `user-decision` | — | — | bloque de handoff a `build` |
+
+**Frontera de escritura.** Solo el implementador escribe producción. Quién lo garantiza difiere y
+conviene saberlo: en **opencode** está atado por configuración (`permission.edit` por rol, con
+`plans/**` permitido); en **claude** y **codex** la frontera es prosa del prompt — `disallowedTools:
+Agent` y `sandbox_mode = "workspace-write"` no la imponen. Los roles read-only necesitan escribir su
+artefacto bajo `plans/**`, así que una denegación total de escritura los rompería.
+
+**Navegador.** Los tres instalan **Playwright MCP** y **Chrome DevTools MCP**, disponibles para todos
+los roles. Ninguno es el por defecto: cada agente mira las tools que tiene y elige. En claude viven
+en `~/.claude.json` (es donde Claude guarda los MCP de usuario, no en `settings.json`); en codex y
+opencode, en sus plantillas de config.
+
+Los MCP de navegador se configuran para guardar evidencias fuera de la carpeta del proyecto:
+Playwright usa `--allow-unrestricted-file-access` y Chrome DevTools
+`--allow-unrestricted-paths`. Este ultimo se aplica cuando el cliente no negocia MCP roots;
+si el cliente comunica roots, Chrome DevTools sigue respetandolas. Los permisos del sistema
+operativo siguen vigentes. Tras sincronizar, reinicia los clientes para recargar los MCP.
+`install` migra tambien los argumentos existentes de los paquetes oficiales `@latest`,
+sin duplicar flags ni modificar versiones fijadas o una opcion explicita `--flag=false`.
+En Windows, usa rutas nativas o el temporal real del sistema: `/tmp` se resuelve a `C:\tmp`.
+La regresion de esta migracion se comprueba con `python bin/test_browser_paths.py`.
+
+Dos detalles comprobados en ejecucion, no deducidos:
+
+- En **codex** el servidor se llama `chrome_devtools`, sin guion, a proposito: un id citado seria
+  TOML valido pero un servidor MCP que el runtime no acepta no da error, se ignora en silencio.
+- En **opencode** (que corre bajo WSL) `chrome-devtools-mcp` busca Google Chrome estable en
+  `/opt/google/chrome/chrome`, que ahi no existe: conecta igual y **falla en la primera llamada**.
+  Por eso su comando lleva `--executable-path /snap/bin/chromium`, igual que ya hacia playwright.
+  Verificado despachando un `codebase-explorer` que invoco `playwright_browser_navigate` y
+  `chrome-devtools_navigate_page` contra una pagina real. El implementador adjunta capturas y snapshot de
+accesibilidad a su report cuando el brief lleva `UI Contract`, y el reviewer juzga el render antes
+que el diff.
 
 **Ficheros exclusivos de un harness** (`harness/<h>/files/`): `CLAUDE.md` (claude);
 `AGENTS.md` y `skills/orchestrator/agents/openai.yaml` (codex); `AGENTS.md` y
@@ -79,6 +113,7 @@ Nunca edites las carpetas vivas: `install` las sobrescribe y `verify` canta la d
 | El modelo o el effort de un rol | `agentsys models` (no edites el adaptador a mano) |
 | Permisos, colores, nombres de tool, sandbox | `harness/<h>/adapter.toml` |
 | Una skill compartida por los tres | `source/skills/<skill>/` |
+| El validador del bundle | `source/orchestration/skill/scripts/bundle_lint.py` |
 | Una skill de un solo harness | `harness/<h>/files/skills/<skill>/` |
 | `CLAUDE.md`, `AGENTS.md`, plantillas, parches, reglas | `harness/<h>/files/` |
 
@@ -144,6 +179,27 @@ es estado local de cada máquina que no viaja en el repo. Por eso:
 
 Con `--omo-preset <nombre>` se apunta a un preset distinto del activo.
 
+## El gate de validación del bundle
+
+`source/orchestration/skill/scripts/bundle_lint.py` viaja **dentro de la skill orquestadora**, así
+que los tres harnesses lo instalan en la misma ruta relativa y el token `{{BUNDLE_LINT}}` resuelve el
+comando exacto de cada uno. Es de solo lectura: lee los artefactos Markdown, los contrasta con el
+worktree, imprime hallazgos `BL-nn` y devuelve un código de salida. No conduce el flujo ni edita
+nada, así que no es el "bundle controller" que el modelo operativo prohíbe — es correr los tests del
+bundle.
+
+```bash
+python <ruta>/bundle_lint.py plans/<slug> --phase pre-approval    # antes de pedir aprobación
+python <ruta>/bundle_lint.py plans/<slug> --phase pre-synthesis   # antes de la respuesta final
+```
+
+Caza lo que el juicio de un LLM sobre su propio texto no caza: rutas y símbolos que no existen,
+comandos de test que no se pueden ejecutar, briefs a los que les falta una sección del esquema,
+tareas de la misma ola tocando el mismo fichero, nombres de artefacto prohibidos, tareas de UI sin
+evidencia visual, filas del ledger sin estado terminal, hallazgos `RC-nn` abiertos. Solo es
+`BLOCKER` lo que es demostrablemente falso; el resto queda en `WARN`/`INFO`. Si falta el script o el
+intérprete, el coordinador lo dice y hace las mismas comprobaciones a mano.
+
 ## Qué garantiza `verify`
 
 1. **Render determinista.** `rendered/` es exactamente lo que produce `source/ + harness/`. Detecta
@@ -172,8 +228,9 @@ Con `--omo-preset <nombre>` se apunta a un preset distinto del activo.
   existe, difiere y **nunca estuvo gestionado** no se toca: se reporta y hace falta `--force`.
 - Los ficheros que gestionábamos y ya no se generan se retiran al backup, no se borran.
 - Las plantillas de configuración se fusionan de forma **aditiva**: se añaden las claves del sistema
-  que falten y jamás se sobrescribe un valor existente. La única excepción declarada es subir
-  `subagent_depth` a 2 en OpenCode, que el orquestador opcional necesita. Los comentarios y el
+  que falten y jamás se sobrescribe un valor existente. Las excepciones declaradas son subir
+  `subagent_depth` a 2 en OpenCode y añadir los permisos de rutas de los MCP de navegador
+  oficiales `@latest` descritos arriba. Los comentarios y el
   formato del fichero del usuario se conservan, así que una clave **anidada** que falte dentro de un
   bloque que ya existe no se inserta: se reporta por su ruta con `REVISA A MANO` para que la añadas
   tú. Silenciarla sería peor que pedírtela.
@@ -197,7 +254,7 @@ docs/DISENO.md            el modelo operativo, agnóstico de harness
 docs/MANTENIMIENTO.md     invariantes, flujo de cambio, definition of done
 docs/INSTALACION.md       PC nuevo, WSL, problemas típicos
 docs/HARNESS-OPENCODE.md  manual concreto de la instalación OpenCode
-source/orchestration/     roles.toml, skill/SKILL.md + sections/, agents/<rol>.md
+source/orchestration/     roles.toml, skill/SKILL.md + sections/ + scripts/, agents/<rol>.md
 source/skills/            skills desplegadas en los tres harnesses
 harness/<h>/adapter.toml  tokens, modelo/effort y envoltorio por rol, frontmatter de la skill
 harness/<h>/model-profiles/ perfiles de modelos de ese harness

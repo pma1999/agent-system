@@ -25,12 +25,22 @@
           "npx",
           "-y",
           "@playwright/mcp@latest",
+          "--allow-unrestricted-file-access",
           "--headless",
           "--browser",
           "chromium",
           "--executable-path",
           "/snap/bin/chromium"
         ],
+        "timeout": {
+          "catalog": 20000,
+          "execution": 20000
+        }
+      },
+      "chrome-devtools": {
+        "type": "local",
+        "command": ["npx", "-y", "chrome-devtools-mcp@latest", "--headless", "--isolated",
+                    "--executable-path", "/snap/bin/chromium", "--allow-unrestricted-paths"],
         "timeout": {
           "catalog": 20000,
           "execution": 20000
@@ -68,7 +78,10 @@
       ]
     },
     "build": {
-      "permissions": [{ "action": "playwright_*", "resource": "*", "effect": "allow" }]
+      "permissions": [
+        { "action": "playwright_*", "resource": "*", "effect": "allow" },
+        { "action": "chrome-devtools_*", "resource": "*", "effect": "allow" }
+      ]
     },
     "explore": { "disabled": true },
     "general": { "disabled": true }

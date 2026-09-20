@@ -14,7 +14,6 @@ skill_path = "skills/{skill}/SKILL.md"
 obsolete = [
   "skills/orchestrator.zip",
   "skills/orchestrator/references",
-  "skills/orchestrator/scripts",
   "agents/implementation-planner-claude-host.toml",
 ]
 
@@ -29,6 +28,7 @@ OWNER_ID = "agent id"
 ASK_USER = "a direct question in the thread"
 PROVENANCE = "engine=codex | model=gpt-5.6-sol | effort=xhigh"
 MODEL_PIN = "a fixed per-role profile declared in each agent TOML"
+BUNDLE_LINT = "python ~/.codex/skills/orchestrator/scripts/bundle_lint.py"
 
 COORDINATOR_INTRO = """
 You are the parent coordinator: the current top-level Codex thread. You talk to the user, retain

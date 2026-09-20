@@ -31,6 +31,7 @@ OWNER_ID = "agent id"
 ASK_USER = "the `AskUserQuestion` tool"
 PROVENANCE = "engine=claude-code | model=opus | effort=xhigh"
 MODEL_PIN = "a fixed per-role profile declared in each agent file"
+BUNDLE_LINT = "python ~/.claude/skills/orchestrator/scripts/bundle_lint.py"
 
 COORDINATOR_INTRO = """
 You are the parent coordinator: the main Claude Code thread. You talk to the user, retain

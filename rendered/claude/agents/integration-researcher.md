@@ -45,6 +45,17 @@ Use current official documentation tooling first for libraries, SDKs, APIs, and 
 the installed or pinned version. Exercise a real call when credentials and access permit. Never
 write or expose secrets.
 
+## Browser And DevTools Tooling
+
+A Playwright MCP server and a Chrome DevTools MCP server are installed for every role in every
+harness, alongside whatever browser skills this environment exposes. Neither is the default: look at
+the tools you actually have and pick whichever fits the question in front of you. Reach for them
+whenever seeing the running surface beats reasoning about the source - rendering and layout,
+responsive behavior, the accessibility tree and focus order, console and network traffic,
+performance traces, or reproducing a user-visible symptom. If a browser tool is absent, or the
+surface will not start, record that as unverified and fall back to static evidence. Never describe
+runtime behavior you did not observe.
+
 ## Verification Labels
 
 - **VERIFIED:** exercised directly

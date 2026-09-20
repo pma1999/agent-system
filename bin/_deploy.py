@@ -147,6 +147,15 @@ def install_harness(h: Harness, force, dry: bool, stamp: str) -> tuple[int, list
             bak = backups() / stamp / h.name / key
             bak.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(p), str(bak))
+        # Un directorio que se queda vacio al retirar su contenido se retira
+        # tambien: una carpeta `skills/<x>/` sin SKILL.md no es una skill, pero
+        # si es una fuente de confusion. Solo se sube mientras quede vacio y sin
+        # salir de la carpeta viva.
+        if not dry:
+            d = p.parent
+            while d != live and d.is_dir() and not any(d.iterdir()):
+                d.rmdir()
+                d = d.parent
     if not dry:
         (live / MANIFEST).write_text(
             json.dumps({"generated": stamp, "source": str(ROOT), "files": installed}, indent=2)
@@ -276,6 +285,50 @@ def _strip_jsonc(text: str) -> str:
     return _re.sub(r"(?<![:\"\w])//[^\"\n]*$", "", text, flags=_re.M)
 
 
+def _find_object_span(raw: str, key: str, start: int, end: int) -> tuple[int, int] | None:
+    """Rango (pos tras `{`, pos del `}`) del objeto `key` dentro de raw[start:end]."""
+    m = _re.search(r'"' + _re.escape(key) + r'"\s*:\s*\{', raw[start:end])
+    if not m:
+        return None
+    open_at = start + m.end()
+    depth, i, n = 1, open_at, len(raw)
+    in_str = esc = False
+    while i < n and depth:
+        c = raw[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif c == "\\":
+                esc = True
+            elif c == '"':
+                in_str = False
+        elif c == '"':
+            in_str = True
+        elif c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+            if not depth:
+                return open_at, i
+        i += 1
+    return None
+
+
+def _insert_nested(raw: str, path: list[str], value, indent: str = "  ") -> str | None:
+    """Inserta textualmente `value` en raw bajo la ruta `path`, conservando
+    comentarios y formato. Devuelve None si el padre no existe como objeto."""
+    start, end = 0, len(raw)
+    for parent in path[:-1]:
+        span = _find_object_span(raw, parent, start, end)
+        if span is None:
+            return None
+        start, end = span
+    pad = indent * (len(path) + 1)
+    body = json.dumps(value, indent=2).replace(chr(10), chr(10) + pad)
+    entry = chr(10) + pad + json.dumps(path[-1]) + ": " + body + ","
+    return raw[:start] + entry + raw[start:]
+
+
 def merge_jsonc(target: Path, template: Path, dry: bool) -> int:
     """Insercion textual: conserva comentarios y formato del fichero del usuario."""
     if not template.exists():
@@ -300,6 +353,21 @@ def merge_jsonc(target: Path, template: Path, dry: bool) -> int:
         sep = "," if not head.rstrip().endswith("{") else ""
         raw = head + sep + "\n" + block + "\n}" + raw[i + 1:]
         changed += len(missing)
+    # claves anidadas ausentes: insercion textual dentro del bloque padre, que
+    # conserva los comentarios del usuario. Solo se anaden las que faltan; nunca
+    # se toca un valor existente.
+    for q in missing_paths(json.loads(_strip_jsonc(raw)), tpl):
+        if "." not in q:
+            continue
+        parts = q.split(".")
+        node = tpl
+        for k in parts:
+            node = node[k]
+        out = _insert_nested(raw, parts, node)
+        if out is not None:
+            raw = out
+            changed += 1
+
     # migracion forzada: el orquestador opcional necesita profundidad 2
     m = _re.search(r'"subagent_depth"\s*:\s*(\d+)', raw)
     if m and int(m.group(1)) < 2:
@@ -347,8 +415,16 @@ def merge_toml(target: Path, template: Path, dry: bool) -> int:
         if k not in cur:
             head.append(_re.search(rf"(?m)^{_re.escape(k)}\s*=.*$", tpl_raw).group(0))
     for name in _re.findall(r"(?m)^\[([^\]]+)\]", tpl_raw):
-        top = name.split(".")[0]
-        if top not in cur:
+        # Una subtabla se inserta si falta su ruta COMPLETA, aunque su tabla
+        # padre ya exista: `[mcp_servers.codegraph]` presente no debe impedir
+        # anadir `[mcp_servers.playwright]`. TOML admite la subtabla al final.
+        node, absent = cur, False
+        for part in [x.strip().strip('"') for x in name.split(".")]:
+            if not isinstance(node, dict) or part not in node:
+                absent = True
+                break
+            node = node[part]
+        if absent:
             body = _re.search(rf"(?ms)^\[{_re.escape(name)}\].*?(?=^\[|\Z)", tpl_raw).group(0)
             tables.append(body.rstrip())
     changed = len(head) + len(tables)
@@ -361,7 +437,11 @@ def merge_toml(target: Path, template: Path, dry: bool) -> int:
 
 
 TEMPLATE_MERGES = {
-    "claude":   [("templates/settings.json", "settings.json", merge_json, None)],
+    "claude":   [("templates/settings.json", "settings.json", merge_json, None),
+                 # Claude guarda los servidores MCP de usuario en ~/.claude.json,
+                 # no en ~/.claude/settings.json. Es el unico sitio donde puede
+                 # declararse Playwright/Chrome DevTools para todos los agentes.
+                 ("templates/mcp-servers.json", "~/.claude.json", merge_json, None)],
     "codex":    [("templates/config.toml", "config.toml", merge_toml, toml_unplaced)],
     "opencode": [("templates/opencode.jsonc", "opencode.jsonc", merge_jsonc, jsonc_unplaced),
                  # config del flujo V2 (`opencode2`), que es el que se usa a diario
@@ -369,15 +449,81 @@ TEMPLATE_MERGES = {
 }
 
 
+def migrate_browser_paths(target: Path, dry: bool) -> int:
+    """Actualiza los argumentos de los MCP oficiales @latest sin reformatear.
+
+    Migracion explicita: el usuario quiere guardar evidencias entre proyectos.
+    Las versiones fijadas y los comandos personalizados conservan su politica.
+    """
+    if not target.exists():
+        return 0
+    raw = target.read_text(encoding="utf-8")
+    flags = {
+        "@playwright/mcp@latest": "--allow-unrestricted-file-access",
+        "chrome-devtools-mcp@latest": "--allow-unrestricted-paths",
+    }
+    changed = 0
+
+    def update(match):
+        nonlocal changed
+        body = match.group(2)
+        try:
+            args = json.loads(_strip_jsonc("[" + body + "]"))
+        except (ValueError, TypeError):
+            return match.group(0)
+        if not isinstance(args, list):
+            return match.group(0)
+        for package, flag in flags.items():
+            if package not in args or any(
+                isinstance(arg, str) and
+                (arg == flag or arg.startswith(flag + "="))
+                for arg in args
+            ):
+                continue
+            # Inserta justo despues del paquete, antes de posibles comentarios.
+            package_match = _re.search(_re.escape(json.dumps(package)), body)
+            if package_match is None:
+                continue
+            at = package_match.end()
+            body = body[:at] + ", " + json.dumps(flag) + body[at:]
+            changed += 1
+        return match.group(1) + body + "]"
+
+    result = _re.sub(
+        r'((?:"(?:args|command)"\s*:|\bargs\s*=)\s*\[)'
+        r'((?:[^"\]]|"(?:\\.|[^"\\])*")*)\]',
+        update, raw,
+    )
+    if changed and not dry:
+        # Valida antes de escribir y conserva una copia de esta migracion.
+        if target.suffix == ".toml":
+            _tomllib.loads(result)
+        else:
+            json.loads(_strip_jsonc(result))
+        backup = backups() / now() / "browser-paths" / target.name
+        backup.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(target, backup)
+        target.write_text(result, encoding="utf-8", newline="\n")
+    return changed
+
+
 def merge_templates(h: Harness, dry: bool) -> list[str]:
     live, out = live_dir(h), []
     for tpl_rel, target_rel, fn, unplaced in TEMPLATE_MERGES.get(h.name, []):
-        tpl, target = RENDERED / h.name / tpl_rel, live / target_rel
+        tpl = RENDERED / h.name / tpl_rel
+        # Un destino que empieza por `~/` vive fuera de install_dir. Se usa para
+        # ficheros que el harness escribe solo para si (los MCP de Claude viven
+        # en ~/.claude.json, no en ~/.claude/settings.json) y sigue las mismas
+        # reglas: fusion aditiva, copia .bak, nunca se pisa un valor existente.
+        target = (home() / target_rel[2:]) if target_rel.startswith("~/") else live / target_rel
         if target.exists() and not dry:
             shutil.copy2(target, target.with_suffix(target.suffix + ".bak"))
         n = fn(target, tpl, dry)
         if n:
             out.append(f"{target_rel}: {n} claves del sistema anadidas")
+        migrated = migrate_browser_paths(target, dry)
+        if migrated:
+            out.append(f"{target_rel}: {migrated} permisos de rutas MCP actualizados")
         restantes = unplaced(target, tpl) if unplaced else []
         if restantes:
             out.append(f"{target_rel}: REVISA A MANO, claves anidadas del sistema que faltan "

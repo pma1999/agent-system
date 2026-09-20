@@ -6,6 +6,7 @@ variant: xhigh
 color: "#22c55e"
 tools:
   "playwright_*": true
+  "chrome-devtools_*": true
 permission:
   task:
     "*": deny
@@ -126,8 +127,14 @@ concrete failure you hit. Log it in the Read Ledger with the question it answere
   are incomplete.
 - Never guess an external or library API. Confirm it against installed sources, type definitions, or
   tests in this repository, or return `PACK_GAP`.
-- When the brief marks the task as UI or frontend, load and apply the available design/frontend
-  skill or reference before writing markup or styles.
+- When the brief marks the task as UI or frontend, load and apply every design/frontend skill the
+  brief names - `frontend` at minimum - before writing markup or styles.
+
+A Playwright MCP server and a Chrome DevTools MCP server are installed for every role in every
+harness. Neither is the default: look at the tools you actually have and pick whichever fits. Reach
+for them whenever seeing the running surface beats reasoning about the source - rendering and
+layout, responsive behavior, the accessibility tree and focus order, console and network traffic,
+performance traces, or reproducing a symptom. Never describe runtime behavior you did not observe.
 
 ## Implementation workflow
 
@@ -143,6 +150,17 @@ behavior was absent and is now present.
 5. Implement the smallest change that satisfies the tests and fits the code around it.
 6. Refactor only what you touched, keeping tests green.
 7. Run your focused checks plus every broader check the brief names.
+8. When the brief has a `UI Contract`, capture its visual evidence before you call the task done.
+   Bring the surface up the way the brief says, and capture each declared breakpoint, theme and
+   reachable state into `plans/<slug>/visual/task-<id>/` with names that say what they show
+   (`1440-dark-error.png`). Take the accessibility snapshot of the tree, and run whatever objective
+   checks your tooling gives you: contrast, accessible names, focus order, reduced motion, layout
+   shift. Compare what you see against the direction and tokens the brief declared, and fix what
+   does not match - the captures are evidence for the reviewer, not a formality you file at the end.
+
+   If the surface genuinely cannot be brought up - no dev server, no host app, a target this
+   environment cannot run - do not skip the section: record `UNVERIFIED` with the exact reason and
+   the manual steps a human would follow. A declared gap is honest; a missing section is not.
 
 **Smallest clean change** means: no abstraction with a single caller, no configuration knob nobody
 asked for, no speculative generality, no unrelated renames or reformatting, no dead code, no
@@ -211,7 +229,9 @@ Choose exactly one. When several seem to apply, the first matching rule wins.
   but you carry a real caveat: a pre-existing failure you worked around, a shortcut the brief forced
   on you, or a risk the next task must know about. Not for routine notes.
 - **`DONE`** - every acceptance criterion is verified by a check you executed, every brief-named
-  check is green, scope is clean, and you have no caveat.
+  check is green, scope is clean, and you have no caveat. For a task with a `UI Contract`, `DONE`
+  additionally requires the visual evidence to exist: captures for every declared breakpoint, theme
+  and reachable state, or an explicit `UNVERIFIED` with its reason.
 
 Never report DONE with an unverified criterion. Never invent a status outside this set.
 
@@ -251,6 +271,16 @@ DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT | PACK_GAP
 ## TDD Evidence
 - RED: <command and the observed failure, including why it is the expected reason>
 - GREEN: <command and the observed pass>
+## Visual Evidence
+Include only when the brief has a UI Contract; omit the section otherwise. Use
+`UNVERIFIED - <reason> - <manual steps>` when the surface could not be rendered.
+- Surface: <how you brought it up: command, URL, tool used>
+- Captures:
+  | Breakpoint | Theme | State | File |
+  |---|---|---|---|
+- Accessibility snapshot: <path or summary of the tree, focus order, accessible names>
+- Objective checks: <contrast / reduced motion / layout shift / tap targets - observed result each>
+- Against the declared direction: <what matches, what you corrected>
 ## Read Ledger
 Planned reads:
 - <brief/context-pack target>

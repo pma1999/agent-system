@@ -239,6 +239,7 @@ plans/<slug>/
   debug-diagnosis.md        # causa raíz con evidencia
   second-diagnosis-<id>.md  # segundo diagnóstico independiente, preservado verbatim
   quick-<slug>/brief.md     # variante lane Quick
+  visual/task-<id>/         # capturas y snapshot de accesibilidad de una tarea con UI
   progress.md               # LEDGER de coordinación (dueños, baseline, status, evidencia)
 ```
 
@@ -268,6 +269,29 @@ Reglas adicionales:
 ---
 
 ## 7. Gates y disparadores
+
+**Gate de validación del bundle (determinista).** Antes de pedir aprobación y antes de la síntesis
+final, el bundle se contrasta con el repositorio mediante un validador de solo lectura
+(`bundle_lint.py`, que viaja dentro de la skill orquestadora). Existe porque el resto del sistema
+descansa en juicio de LLM sobre texto escrito por LLM, y un bundle puede ser internamente coherente
+e incompatible con el repo: rutas y símbolos inexistentes, comandos de test que no se pueden
+ejecutar, briefs incompletos, olas "paralelas" que tocan el mismo fichero, tareas de UI sin
+evidencia visual, filas del ledger sin estado terminal, `RC-nn` abiertos. Devuelve hallazgos
+`BL-nn`; solo es `BLOCKER` lo demostrablemente falso. Un blocker se repara **en su artefacto dueño,
+por el dueño que lo escribió**, y se vuelve a pasar el gate. El coordinador nunca edita el artefacto
+de un especialista para silenciarlo, y si el validador no está disponible lo dice y hace las mismas
+comprobaciones a mano. El gate es una ayuda mecánica, nunca una dependencia ni un controlador de
+flujo.
+
+**Evidencia visual (obligatoria en tareas con `UI Contract`).** Los tres harnesses instalan
+Playwright MCP y Chrome DevTools MCP para todos los roles; ninguno es el por defecto y cada agente
+elige según lo que tenga delante. El planner declara en el brief la superficie, los breakpoints, los
+temas y los estados a capturar. El implementador no puede devolver `DONE` sin haberlos capturado en
+`plans/<slug>/visual/task-<id>/` más el snapshot de accesibilidad, o sin declarar `UNVERIFIED` con
+razón y checklist manual. El reviewer mira el render **antes** que el diff y reporta solo defectos
+objetivos contra la dirección declarada: tokens que no coinciden, estados que faltan, contraste bajo
+AA, foco invisible o desordenado, desbordes por breakpoint, layout shift. El gusto no es un
+hallazgo; un token declarado que la implementación ignora, sí.
 
 **Approval gate (antes de implementar):** resumen de diseño, olas, comportamiento visible, riesgos y
 verificación; opciones aprobar/ajustar. Silencio ≠ aprobación.
@@ -366,4 +390,8 @@ README del repo canonico y, para OpenCode, `HARNESS-OPENCODE.md`.
 - **`PACK_GAP` / `NEEDS_CONTEXT` / `BLOCKED`** — señales terminales de insumos insuficientes.
 - **`RC-nn`** — ID estable de un hallazgo de review, usado para remediación y re-review.
 - **Read ledger** — registro en el report de toda lectura extra y la razón que la justificó.
-- **Gate** — punto de control obligatorio (aprobación, task review, final review, cleanup).
+- **Gate** — punto de control obligatorio (validación del bundle, aprobación, task review, final
+  review).
+- **`BL-nn`** — ID estable de un hallazgo del validador determinista del bundle.
+- **Evidencia visual** — capturas por breakpoint/tema/estado y snapshot de accesibilidad que
+  acompañan al report de una tarea con `UI Contract`.

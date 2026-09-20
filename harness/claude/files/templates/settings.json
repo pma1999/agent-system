@@ -7,7 +7,11 @@
       "mcp__codegraph__codegraph_callees",
       "mcp__codegraph__codegraph_impact",
       "mcp__codegraph__codegraph_node",
-      "mcp__codegraph__codegraph_status"
+      "mcp__codegraph__codegraph_status",
+      "mcp__playwright",
+      "mcp__chrome-devtools",
+      "Bash(python ~/.claude/skills/orchestrator/scripts/bundle_lint.py:*)",
+      "Bash(python3 ~/.claude/skills/orchestrator/scripts/bundle_lint.py:*)"
     ],
     "defaultMode": "auto"
   },

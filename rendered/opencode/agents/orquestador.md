@@ -4,6 +4,9 @@ mode: all
 model: opencode-go/muse-spark-1.3-contributor
 variant: xhigh
 color: "#0ea5e9"
+tools:
+  "playwright_*": true
+  "chrome-devtools_*": true
 steps: 80
 permission:
   task:

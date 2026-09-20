@@ -9,7 +9,14 @@
     },
     "playwright": {
       "type": "local",
-      "command": ["npx", "-y", "@playwright/mcp@latest", "--headless", "--browser", "chromium"],
+      "command": ["npx", "-y", "@playwright/mcp@latest", "--headless", "--browser", "chromium", "--allow-unrestricted-file-access"],
+      "enabled": true,
+      "timeout": 20000
+    },
+    "chrome-devtools": {
+      "type": "local",
+      "command": ["npx", "-y", "chrome-devtools-mcp@latest", "--headless", "--isolated",
+                  "--executable-path", "/snap/bin/chromium", "--allow-unrestricted-paths"],
       "enabled": true,
       "timeout": 20000
     }
@@ -28,7 +35,8 @@
     },
     "build": {
       "tools": {
-        "playwright_*": true
+        "playwright_*": true,
+        "chrome-devtools_*": true
       }
     },
     "explore": {

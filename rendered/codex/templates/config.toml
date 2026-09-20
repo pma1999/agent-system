@@ -41,3 +41,22 @@ approval_mode = "approve"
 
 [mcp_servers.codegraph.tools.codegraph_explore]
 approval_mode = "approve"
+
+# Sandbox: los especialistas necesitan red para verificar contratos externos,
+# instalar lo que el repo pida y hablar con un dev server local. Aditivo: si ya
+# tienes la tabla, tu valor manda.
+[sandbox_workspace_write]
+network_access = true
+
+# Navegador. Los dos MCP conviven a proposito: cada agente elige el que mejor
+# encaje con lo que tiene delante.
+[mcp_servers.playwright]
+command = "npx"
+args = ["-y", "@playwright/mcp@latest", "--headless", "--browser", "chromium", "--allow-unrestricted-file-access"]
+
+# Sin guion a proposito: un id citado (`"chrome-devtools"`) es TOML valido pero
+# depende de que Codex lo acepte como nombre de servidor, y un servidor que no
+# carga no da error, se ignora en silencio.
+[mcp_servers.chrome_devtools]
+command = "npx"
+args = ["-y", "chrome-devtools-mcp@latest", "--headless", "--isolated", "--allow-unrestricted-paths"]

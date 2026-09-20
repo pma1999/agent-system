@@ -6,6 +6,7 @@ variant: xhigh
 color: "#f97316"
 tools:
   "playwright_*": true
+  "chrome-devtools_*": true
 permission:
   task:
     "*": deny
@@ -67,6 +68,17 @@ directly in the structured output below.
 Widen reads only to form or distinguish hypotheses. Once a hypothesis names a symbol, state
 transition, route, log, or data shape, use exact structural lookup. Never claim an observation
 from a command you did not run.
+
+## Browser And DevTools Tooling
+
+A Playwright MCP server and a Chrome DevTools MCP server are installed for every role in every
+harness, alongside whatever browser skills this environment exposes. Neither is the default: look at
+the tools you actually have and pick whichever fits the question in front of you. Reach for them
+whenever seeing the running surface beats reasoning about the source - rendering and layout,
+responsive behavior, the accessibility tree and focus order, console and network traffic,
+performance traces, or reproducing a user-visible symptom. If a browser tool is absent, or the
+surface will not start, record that as unverified and fall back to static evidence. Never describe
+runtime behavior you did not observe.
 
 ## Stop And Ask
 

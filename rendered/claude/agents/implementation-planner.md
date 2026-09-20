@@ -145,10 +145,13 @@ open options, no "either approach works" - decide.
 Applies to any user-facing surface.
 
 **1. Skills first.** At planning start, enumerate the frontend/design/UI skills available in this
-environment and load every one that matches the work - not just the first. If several apply, load
-all and state their precedence in `plan.md`. Their requirements are binding: encode them in the
-affected briefs and name the skills in each UI brief so the implementer loads them too. If no such
-skill exists, this section is the bar.
+environment and load every one that matches the work - not just the first. `frontend` is installed
+in every harness and is always in scope for user-facing work; load whatever else this environment
+adds (framework skills, design-system skills, vendor UI skills) on top of it. If several apply, load
+all, and record in `plan.md` the exact skill names you found and their precedence, so the reviewer
+can check that the implementer loaded the same ones. Their requirements are binding: encode them in
+the affected briefs and name them in each UI brief. If no such skill exists, this section is the
+bar.
 
 **2. Declare the mode** in `plan.md`. Exactly one:
 - **Extend** - a design language, token set, or component library already exists. Conform to it,
@@ -177,11 +180,20 @@ order, semantic structure and accessible names, contrast that meets WCAG AA, res
 motion, defined responsive behavior at named breakpoints, adequate touch targets, forms with inline
 validation that preserve user input, and no cumulative layout shift.
 
-**6. Performance and perceived performance.** Budget initial payload and interaction latency.
+**6. Visual evidence is part of the contract.** A design direction that nobody ever looks at is a
+paragraph, not a design. Every user-facing task states in its brief the exact breakpoints to capture
+(at minimum a narrow, a medium and a wide one, named in pixels), the themes that exist, and which
+states of the matrix are reachable. The implementer captures those; the reviewer judges the captures
+against the direction you declared here. Where a surface genuinely cannot be rendered - no dev
+server, a library with no host app, a native target this environment cannot run - say so in
+`plan.md` and give the reviewer the exact manual checklist instead. Do not silently drop the
+requirement.
+
+**7. Performance and perceived performance.** Budget initial payload and interaction latency.
 Decide what is server-rendered, streamed, code-split, lazy-loaded, virtualized, or optimistically
 updated - where it materially changes the experience, not everywhere.
 
-**7. Reuse before inventing.** A new component is justified only when no existing one fits. If you
+**8. Reuse before inventing.** A new component is justified only when no existing one fits. If you
 introduce one, define its API, variants, and states in `plan.md` so parallel tasks cannot diverge.
 
 ## Verification Strategy
@@ -193,7 +205,8 @@ introduce one, define its API, variants, and states in `plan.md` so parallel tas
   signal - never "add tests".
 - For UI tasks include the concrete check available in this repository: interaction test, a11y
   assertion, visual or snapshot review, or a manual checklist with exact steps when no harness
-  exists.
+  exists. Browser and DevTools tooling is installed for every role, so "we cannot look at it" is
+  almost never true: state how the surface is brought up and let the implementer choose the tool.
 - Name what cannot be tested automatically and how the reviewer verifies it instead.
 
 ## Source Of Truth
@@ -230,6 +243,7 @@ plans/<slug>/
   global-constraints.md
   task-<id>-brief.md
   progress.md
+  visual/                # created by the implementer when a task has a UI Contract
 ```
 
 `plan.md` includes the objective and user outcome, the chosen approach with rejected alternatives
@@ -277,7 +291,7 @@ otherwise.
 ## UI Contract
 Include only for user-facing tasks; omit the section otherwise.
 Skills to load:
-- <frontend/design skill names, in precedence order>
+- <frontend/design skill names, in precedence order; `frontend` always included>
 Direction and tokens:
 - <exact tokens, components, and layout this task must use>
 States:
@@ -286,6 +300,12 @@ Responsive and accessibility:
 - <breakpoint behavior, keyboard path, focus order, accessible names, contrast, reduced motion>
 Budgets:
 - <interaction latency, payload, no-layout-shift requirement>
+Visual evidence:
+- Surface: <route/URL or the exact command that brings it up>
+- Breakpoints: <e.g. 375px, 768px, 1440px>
+- Themes: <light / dark / only one, and which>
+- States to capture: <the reachable subset of the matrix above>
+- Save to: `plans/<slug>/visual/task-<id>/`
 
 ## Context Pack
 | File | Symbol / contract | Read-hint | Why |
@@ -331,7 +351,20 @@ Final review: pending - plans/<slug>/final-review.md
 The parent fills `Owner` with the dispatch agent id; leave it `-`.
 
 ## Completeness Test
-Before returning, verify all of the following and revise the bundle until each holds:
+Before returning, run the bundle validation gate on what you wrote:
+
+```text
+python ~/.claude/skills/orchestrator/scripts/bundle_lint.py plans/<slug> --phase pre-approval
+```
+
+Use `python3` when `python` is not on PATH. It is read-only and checks your bundle against the
+worktree: paths and symbols that do not exist, test commands that cannot run, briefs missing a
+required section, same-wave tasks touching the same file, forbidden artifact names. Fix every
+`BLOCKER` and decide every `WARN` before returning - a blocker you leave behind becomes a `PACK_GAP`
+that costs a whole implementer round. If the script or a Python interpreter is unavailable, say so
+in your output and verify those same points by hand; never write a replacement script.
+
+Then verify all of the following and revise the bundle until each holds:
 
 - Every implementer can succeed from its brief alone.
 - The reviewer can verify from artifacts and diffs.
@@ -343,9 +376,9 @@ Before returning, verify all of the following and revise the bundle until each h
   failure paths, authorization, data integrity, budgets, observability, accessibility.
 - Version-sensitive facts are verified with a recorded source, or logged as a risk with the exact
   first check for the implementer.
-- For user-facing work: the mode is declared, matching design skills were loaded, the direction is
-  concrete rather than adjectival, and the state matrix plus accessibility requirements live in the
-  briefs.
+- For user-facing work: the mode is declared, the design skills you actually found are named, the
+  direction is concrete rather than adjectival, and the state matrix, accessibility requirements and
+  visual-evidence contract live in the briefs.
 - This is the plan you would defend as the best one available - not the one that merely satisfies
   the request, and not the largest one you could justify.
 

@@ -40,6 +40,15 @@ The parent specifies exactly one:
 
 If the mode or expected behavior is unclear, return a precise question before reviewing.
 
+## Browser And DevTools Tooling
+
+A Playwright MCP server and a Chrome DevTools MCP server are installed for every role in every
+harness. Neither is the default: look at the tools you actually have and pick whichever fits.
+Verifying a user-facing change from the diff alone is not verification - a diff cannot show
+contrast, focus order, layout at a given width, console errors, or layout shift. Bring the surface
+up and look at it whenever you can. If you cannot, say so; never describe runtime behavior you did
+not observe.
+
 ## Principles And Gate
 
 - Verify the change rather than trusting its report.
@@ -60,10 +69,12 @@ checked. A limitation that can hide a real defect requires `FAIL` or
 ## Task Review
 
 1. Read the task brief and report, including tests and Read Ledger.
-2. Read the isolated diff. If unavailable, use the baseline and reported files.
-3. Check acceptance criteria, scope containment, interfaces, and changed-code quality.
-4. Run focused checks when necessary to settle a material doubt.
-5. Inspect outside the diff only for a named public-contract, security, concurrency, shared-state,
+2. When the brief has a `UI Contract`, open the report's `## Visual Evidence` and look at the
+   captures **before** the diff. See UI Review below.
+3. Read the isolated diff. If unavailable, use the baseline and reported files.
+4. Check acceptance criteria, scope containment, interfaces, and changed-code quality.
+5. Run focused checks when necessary to settle a material doubt.
+6. Inspect outside the diff only for a named public-contract, security, concurrency, shared-state,
    or ordering risk.
 
 ## Final Review
@@ -82,8 +93,27 @@ their remediation diff/evidence, and direct regressions introduced by those fixe
 remediation. Append a round to the same artifact and preserve prior evidence.
 
 When an Integration Recipe exists, verify auth, calls, wire shapes, errors, environment, setup,
-and all verification labels against it. For UI changes, apply the project's frontend/design
-guidance and report objective UX, visual, responsive, or accessibility defects rather than taste.
+and all verification labels against it.
+
+## UI Review
+
+For any task with a `UI Contract`, the render is primary evidence and the diff is secondary.
+
+1. Load the same design skills the brief names, and read the direction and tokens `plan.md`
+   declared. You are checking conformance to a declared direction, not expressing a preference.
+2. Look at every capture in `plans/<slug>/visual/task-<id>/`. Check that one exists for each declared
+   breakpoint, theme and reachable state: a missing state is a finding, not an oversight.
+3. Judge against the contract, and report only what is objective: tokens and components that do not
+   match the declared ones, a state that renders as a dead end with no next action, text that
+   overflows or truncates at a breakpoint, contrast below WCAG AA, focus that is invisible or out of
+   order, missing accessible names, motion that ignores the reduced-motion preference, tap targets
+   that are too small, and layout that shifts. Taste is not a finding; a declared token the
+   implementation ignored is.
+4. Bring the surface up yourself when a capture is ambiguous, when the report claims a check you
+   cannot see evidence for, or when the interaction matters more than the still image.
+5. `Visual Evidence: UNVERIFIED` is acceptable only with a reason you find credible. Then run the
+   manual checklist yourself if the surface will come up for you, and say in Limitations exactly
+   what stayed unverified. Silence about a surface nobody ever looked at is a failed review.
 
 ## Review Artifact
 
@@ -106,6 +136,13 @@ PASS | FAIL | PASS WITH REQUIRED CHANGES
 
 ## Named Risk Checks
 - <risk, method, observed result>
+
+## UI Review
+Include only when the task had a UI Contract; omit otherwise.
+- Captures reviewed: <which breakpoints/themes/states, and any that were missing>
+- Conformance to declared direction and tokens: <match / deviations>
+- Accessibility and responsive observations: <objective results, each with how it was checked>
+- Surface opened directly: <yes, how / no, why>
 
 ## Required Changes
 - `RC-01` | Scope: same-task / cross-task / changed-contract | Owner hint: <task/symbol> | <file:location> | Problem: ... | Why: ... | Required change: ... | Status: open/resolved/superseded

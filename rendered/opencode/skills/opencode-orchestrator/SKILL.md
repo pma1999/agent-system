@@ -225,6 +225,7 @@ plans/<slug>/
   debug-diagnosis.md
   second-diagnosis-<id>.md
   progress.md
+  visual/task-<id>/           # screenshots and accessibility snapshots, when a task has UI
 ```
 
 Not every lane needs every file. No helper scripts are required, and durable state is plain
@@ -243,6 +244,7 @@ Artifact ownership is strict - each fact has exactly one home:
 - `debug-diagnosis.md`: evidenced root cause and fix direction.
 - `second-diagnosis-<id>.md`: independent second diagnosis, preserved verbatim.
 - `progress.md`: coordination ledger - ownership, baseline, status, and evidence pointers.
+- `visual/task-<id>/`: the captures and accessibility snapshots a UI task's report points at.
 
 Do not paste full plans or accumulated history into later prompts. Put exact values, interfaces,
 symbols, and constraints in their owner artifact. When a fact changes, update the owner artifact
@@ -251,6 +253,38 @@ first, then only the downstream briefs for which that fact is load-bearing.
 Never create an artifact whose basename starts with `report`, `summary`, `findings`, or `analysis`
 before `.md`, case-insensitively; a generic name hides which role produced it, and some runtimes
 block subagent writes to those names. Prefix it with its role, as in `task-01-report.md`.
+
+## Bundle Validation Gate
+
+The bundle is Markdown written by a model, and a bundle can be internally coherent while being
+incompatible with the repository. Before it drives work, contrast it with repository reality
+deterministically:
+
+```text
+python ~/.config/opencode/skills/opencode-orchestrator/scripts/bundle_lint.py plans/<slug> --phase pre-approval
+```
+
+Use `python3` when `python` is not on PATH. Run it at two points in the Plan lane: `--phase
+pre-approval` once the planner returns and before you ask for approval, and `--phase pre-synthesis`
+before the final response. In Quick, run `--phase all` once on the quick bundle after the brief
+exists. Record in `progress.md` that you ran it and what it said.
+
+It is read-only - it reads the artifacts, checks them against the worktree, prints findings and
+exits. It never edits the bundle and never decides anything. Findings carry stable `BL-nn` IDs:
+
+- `BLOCKER` is a fact that is provably wrong: a path, symbol or test command that does not exist, a
+  brief missing a required section, two same-wave tasks declaring the same file, a UI task whose
+  report carries neither visual evidence nor a declared `UNVERIFIED`, a ledger row with no terminal
+  status, a forbidden artifact name.
+- `WARN` and `INFO` are judgement calls. Read them, decide, and say what you decided.
+
+Repair every blocker at its owner artifact, through the owner that wrote it, then re-run the gate.
+Never approve, dispatch, or synthesize over an open blocker, and never edit a specialist's artifact
+yourself to silence one - that converts an independent check into a rubber stamp.
+
+If the script or a Python interpreter is unavailable, say so explicitly and perform the same checks
+by hand before the same gates. The gate is a mechanical aid, not a dependency, and it never replaces
+your own reading of the bundle. Do not write a replacement script.
 
 **`progress.md` minimum shape.** Keep it short and current; it is the source of truth for the
 final synthesis:
@@ -287,6 +321,14 @@ Follow the active engineering policy and these orchestration deltas:
   explicitly mark them unverified.
 - Downstream agents may widen reads only for a named correctness risk and must record the reason.
 
+**Browser and DevTools tooling.** A Playwright MCP server and a Chrome DevTools MCP server are
+installed for every role in every harness, alongside whatever browser skills this environment
+exposes. Neither is the default: each owner looks at the tools it actually has and picks whichever
+fits the question in front of it. Reach for them whenever seeing the running surface beats reasoning
+about the source - rendering, responsive behavior, the accessibility tree and focus order, console
+and network traffic, performance traces, or reproducing a user-visible symptom. When a browser tool
+is absent or the surface will not start, that is recorded as unverified, never guessed.
+
 ## Triage
 
 | Request | Lane |
@@ -310,7 +352,7 @@ roughly three or fewer files expected.
 1. Create `plans/quick-<slug>/brief.md` using the planner's task-brief schema. This is a handoff of
    requirements, pointers, constraints, tests, and risks, not a coordinator-authored design.
 2. Run one focused explorer first only when the touch set is not confidently known.
-3. Capture baseline and dirty-worktree metadata.
+3. Capture baseline and dirty-worktree metadata, and run the validation gate on the quick bundle.
 4. Dispatch one `task-implementer-bdd` with brief and report paths.
 5. Read its report and run the named verification yourself after it returns.
 6. Use task review only for a public/shared contract, security, data, migration, concurrency,
@@ -342,14 +384,16 @@ Dispatch `implementation-planner` with user requirements, context-map paths, rec
 settled product decisions. Do not give it your own architecture or task decomposition. It owns the
 design and dispatch-ready briefs.
 
-Read the returned `plan.md`, `global-constraints.md`, briefs, and `progress.md`. Reject an
-incomplete bundle before asking for approval - approving a bundle you have not verified spends the
-user's decision on the wrong artifact.
+Read the returned `plan.md`, `global-constraints.md`, briefs, and `progress.md`, then run the
+validation gate at `--phase pre-approval`. Reject an incomplete bundle before asking for approval -
+approving a bundle you have not verified spends the user's decision on the wrong artifact, and a
+blocker found here costs one repair instead of one wasted implementer.
 
 ### 4. Approval Gate
 
 Summarize the design, task waves, user-visible behavior, major risks, and verification plan, then
-ask for approval with the `question` tool. A recorded standing approval is enough; record it and continue
+ask for approval with the `question` tool. Say that the validation gate ran and what it returned; never ask
+for approval with an open blocker. A recorded standing approval is enough; record it and continue
 without a redundant question.
 
 Silence is never approval. Do not dispatch implementers before approval.
@@ -371,8 +415,9 @@ concerns in `progress.md`. Repair gaps through their owner artifact before resum
 
 Task review is exceptional. Use it when it prevents downstream waste or materially reduces risk:
 a task gates dependent work, changes a public/shared contract, touches security/data/migrations/
-concurrency/critical UI, reports concerns, or the user requests it. Otherwise record
-`skipped-not-needed` and rely on final review.
+concurrency/critical UI, reports concerns, returns a `UI Contract` task whose visual evidence came
+back `UNVERIFIED`, or the user requests it. Otherwise record `skipped-not-needed` and rely on final
+review.
 
 Dispatch `implementation-reviewer` in task mode with brief, report, baseline/diff instructions,
 changed files/symbols, named risks, and output path.
@@ -380,8 +425,8 @@ changed files/symbols, named risks, and output path.
 ### 7. Final Review
 
 After every task is complete, always dispatch `implementation-reviewer` in final mode with the
-plan, constraints, progress, all reports, baseline, pre-existing-change record, and
-`plans/<slug>/final-review.md`. It verifies integrated behavior, broader checks, and changed public
+plan, constraints, progress, all reports, baseline, pre-existing-change record, the visual evidence
+directory when the work touched a user-facing surface, and `plans/<slug>/final-review.md`. It verifies integrated behavior, broader checks, and changed public
 contract impact without reviewing unrelated dirty-worktree changes.
 
 **Review output contract (both modes).** Require findings as a numbered list with stable IDs
@@ -449,8 +494,12 @@ Build the final response from `progress.md`, task reports, task reviews where us
 observed results, limitations, unresolved concerns, and any natural next action. Do not claim
 runtime behavior that was not observed and do not paste artifacts unless asked.
 
+Run the validation gate at `--phase pre-synthesis` first; its blockers are exactly the gaps a final
+response must not paper over.
+
 Before responding, confirm:
 
+- the pre-synthesis gate is clean, or every remaining finding is reported to the user as open;
 - every task in `progress.md` has a terminal status and a recorded owner or a `stale` mark;
 - every review finding is fixed, accepted with a recorded reason, or listed as open;
 - the named verification was actually run and its observed output recorded; anything unrun is

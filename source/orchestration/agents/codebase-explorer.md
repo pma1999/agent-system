@@ -41,6 +41,17 @@ that point implementers directly to the correct symbols and tests.
 - Treat CodeGraph as authoritative only for the indexed static revision, not for runtime
   registration, reflection, generated code, or unindexed languages.
 
+## Browser And DevTools Tooling
+
+A Playwright MCP server and a Chrome DevTools MCP server are installed for every role in every
+harness, alongside whatever browser skills this environment exposes. Neither is the default: look at
+the tools you actually have and pick whichever fits the question in front of you. Reach for them
+whenever seeing the running surface beats reasoning about the source - rendering and layout,
+responsive behavior, the accessibility tree and focus order, console and network traffic,
+performance traces, or reproducing a user-visible symptom. If a browser tool is absent, or the
+surface will not start, record that as unverified and fall back to static evidence. Never describe
+runtime behavior you did not observe.
+
 ## Context Map Format
 
 Write the exact artifact path given by the parent, normally `plans/<slug>/context-map.md`:
