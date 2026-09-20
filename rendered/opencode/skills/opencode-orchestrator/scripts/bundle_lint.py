@@ -67,7 +67,10 @@ PATH_NOISE = re.compile(
 )
 
 NEW_FILE_MARKERS = re.compile(
-    r"\((?:new|nuevo|nueva|to create|create|created|a crear)\)|\bnew file\b|"
+    r"^\s*(?:new|nuevo|nueva)(?:\s+(?:file|fichero|archivo|test|tests?)\b|\s+`)|"
+    r"\(\s*(?:new|nuevo|nueva)\b|"
+    r"\b(?:new|nuevo|nueva)\s+(?:file|fichero|archivo|test|tests?)\b|"
+    r"\((?:to create|create|created|a crear)\)|\bnew file\b|"
     r"\bfichero nuevo\b|\bdoes not exist yet\b|\bno existe a[uú]n\b",
     re.I,
 )
@@ -94,6 +97,16 @@ RC_ITEM_START_RE = re.compile(
 )
 MARKDOWN_LIST_START_RE = re.compile(r"^\s*[-*]\s+", re.I)
 ROUND_START_RE = re.compile(r"^\s*###\s+", re.I)
+
+LINE_RANGE_RE = re.compile(
+    r"(?P<suffix>\.[A-Za-z0-9]{1,8}):\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*$"
+)
+MODULE_EXTENSIONS = (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".py")
+COMMON_REPO_DIRS = {
+    "app", "assets", "bin", "components", "config", "data", "docs", "fixtures", "harness",
+    "lib", "migrations", "packages", "pages", "prisma", "public", "rendered", "routes",
+    "scripts", "source", "src", "styles", "tests", "test", "types",
+}
 
 
 # ---------------------------------------------------------------- model
@@ -323,8 +336,21 @@ def table_rows(text: str) -> list[list[str]]:
     return rows
 
 
+def normalize_path_token(token: str) -> str:
+    """Remove Markdown punctuation and an optional `:line[-line]` suffix."""
+    token = token.strip()
+    token = LINE_RANGE_RE.sub(r"\g<suffix>", token)
+    return token.strip("`*_,;:()[]{}\"' ")
+
+
 def looks_like_path(token: str) -> bool:
-    token = token.strip().strip("`*_,;:()[]{}\"'")
+    raw = token.strip()
+    # Inline calls such as `vi.mock("../lib/db")` are code examples, not
+    # paths asserted by the brief.  Keep real relative module paths, which do
+    # not contain call parentheses, eligible for extension resolution below.
+    if "(" in raw or ")" in raw:
+        return False
+    token = normalize_path_token(raw)
     if not token or PATH_NOISE.match(token):
         return False
     # Un token con espacios es prosa o una cabecera de tabla ("Symbol / contract"),
@@ -335,10 +361,17 @@ def looks_like_path(token: str) -> bool:
         return False
     if token.startswith(("http://", "https://", "npm ", "-")):
         return False
+    slash_token = token.replace("\\", "/")
     p = Path(token)
     if p.suffix.lower() in CODEISH_SUFFIXES:
         return True
-    return "/" in token and not token.endswith(("()", ".")) and len(token) > 3
+    if "/" not in slash_token or slash_token.endswith(".") or len(token) <= 3:
+        return False
+    if slash_token.startswith(("./", "../", "/", "~/")):
+        return True
+    if re.match(r"^[A-Za-z]:/", slash_token):
+        return True
+    return slash_token.split("/", 1)[0].lower() in COMMON_REPO_DIRS
 
 
 def candidate_paths(text: str) -> list[str]:
@@ -347,13 +380,13 @@ def candidate_paths(text: str) -> list[str]:
     for tok in backticked(text):
         for part in re.split(r"\s+|,|;", tok):
             if looks_like_path(part):
-                out.append(part.strip().strip("`*_,;:()[]{}\"'"))
+                out.append(normalize_path_token(part))
     for line in text.splitlines():
         if line.strip().startswith("|"):
             for cell in line.strip("|").split("|"):
                 cell = cell.strip()
                 if cell and "`" not in cell and looks_like_path(cell):
-                    out.append(cell.strip("*_,;:()[]{}\"' "))
+                    out.append(normalize_path_token(cell))
     seen, uniq = set(), []
     for p in out:
         if p not in seen:
@@ -363,20 +396,26 @@ def candidate_paths(text: str) -> list[str]:
 
 
 def path_exists(repo: Path, rel: str) -> bool:
-    rel = rel.replace("\\", "/").lstrip("./")
+    rel = normalize_path_token(rel).replace("\\", "/").lstrip("./")
     if not rel:
         return False
     target = repo / rel
-    if target.exists():
+    variants = [target]
+    if target.suffix == "":
+        variants.extend(Path(f"{target}{ext}") for ext in MODULE_EXTENSIONS)
+        variants.extend(target / f"index{ext}" for ext in MODULE_EXTENSIONS)
+    if any(candidate.exists() for candidate in variants):
         return True
     # A brief may address a file by a suffix of its real path.
-    name = Path(rel).name
-    if not name or name == rel:
-        return False
     try:
-        for hit in repo.rglob(name):
-            if str(hit.as_posix()).endswith(rel):
-                return True
+        for variant in variants:
+            name = variant.name
+            if not name:
+                continue
+            suffix = variant.relative_to(repo).as_posix()
+            for hit in repo.rglob(name):
+                if str(hit.relative_to(repo).as_posix()).endswith(suffix):
+                    return True
     except OSError:
         return False
     return False
@@ -449,11 +488,14 @@ def check_brief(repo: Path, bundle: Path, brief: Path, rep: Report) -> dict:
     if tests.strip() and not backticked(tests):
         rep.blocker(name, "la sección Tests no nombra ningún comando ni fichero concreto",
                     "«add tests» no es verificación; hace falta comando, escenario y señal red/green")
-    for cmd in backticked(tests):
-        problem = unresolvable_command(repo, cmd)
-        if problem:
-            rep.blocker(name, f"Tests: {problem}",
-                        "el implementador no puede producir la señal RED/GREEN pedida")
+    for line in tests.splitlines():
+        if NEW_FILE_MARKERS.search(line):
+            continue
+        for cmd in backticked(line):
+            problem = unresolvable_command(repo, cmd)
+            if problem:
+                rep.blocker(name, f"Tests: {problem}",
+                            "el implementador no puede producir la señal RED/GREEN pedida")
     if tests and not re.search(r"\bred\b|\bgreen\b|rojo|verde|fail|pass", tests, re.I):
         rep.warn(name, "Tests sin señal roja/verde esperada declarada")
 
