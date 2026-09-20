@@ -74,6 +74,27 @@ NEW_FILE_MARKERS = re.compile(
 
 RUNNERS_WITH_SCRIPTS = ("npm", "pnpm", "yarn", "bun")
 
+# Review finding identifiers and their small, intentionally explicit status
+# vocabulary.  Reviews are Markdown, not a machine-readable format: statuses
+# may be on a wrapped continuation line, in a remediation round, or in a
+# final per-ID summary.  The parser below understands those documented shapes
+# without treating arbitrary prose such as "RC-01 quedó abierto" as the
+# current state of the finding.
+RC_ID_RE = re.compile(r"`?(RC-\d{2,})`?", re.I)
+RC_STATUS_WORD_RE = re.compile(
+    r"\b(unresolved|resolved|superseded|accepted|open|"
+    r"resuelt(?:o|a|os|as)|superad(?:o|a|os|as)|"
+    r"aceptad(?:o|a|os|as)|abiert(?:o|a|os|as))\b",
+    re.I,
+)
+RC_STATUS_LABEL_RE = re.compile(r"\bstatus\s*:\s*(.*)", re.I)
+RC_RESULT_LABEL_RE = re.compile(r"\b(?:result|resultado)\s*:\s*(.*)", re.I)
+RC_ITEM_START_RE = re.compile(
+    r"^\s*[-*]\s+(?:[*_`]+)?(RC-\d{2,})(?:[*_`]+)?\b", re.I
+)
+MARKDOWN_LIST_START_RE = re.compile(r"^\s*[-*]\s+", re.I)
+ROUND_START_RE = re.compile(r"^\s*###\s+", re.I)
+
 
 # ---------------------------------------------------------------- model
 
@@ -149,6 +170,139 @@ def sections(text: str) -> dict[str, str]:
     if current is not None:
         out[current] = "\n".join(buf)
     return out
+
+
+def normalize_rc_status(raw: str) -> str | None:
+    """Map the review vocabulary to the four states the gate understands."""
+    m = RC_STATUS_WORD_RE.search(raw)
+    if not m:
+        return None
+    word = m.group(1).lower()
+    if word in {"unresolved", "open", "abierto", "abierta", "abiertos", "abiertas"}:
+        return "open"
+    if word.startswith("resuelt") or word == "resolved":
+        return "resolved"
+    if word.startswith("superad") or word == "superseded":
+        return "superseded"
+    if word.startswith("aceptad") or word == "accepted":
+        return "accepted"
+    return None
+
+
+def labeled_rc_status(line: str) -> str | None:
+    """Read a `Status:` or `Result:` value from one Markdown line."""
+    for pattern in (RC_STATUS_LABEL_RE, RC_RESULT_LABEL_RE):
+        m = pattern.search(line)
+        if m:
+            return normalize_rc_status(m.group(1))
+    return None
+
+
+def direct_rc_status(line: str) -> str | None:
+    """Read compact summaries such as ``RC-01: resolved``."""
+    if not RC_ID_RE.search(line):
+        return None
+    # A direct ID summary has the state immediately after the separator.  It
+    # deliberately does not match `RC-01 quedó abierto` in narrative prose.
+    if not re.search(r"RC-\d{2,}\s*(?:[:|—-])", line, re.I):
+        return None
+    tail = re.split(r"RC-\d{2,}\s*(?:[:|—-])", line, maxsplit=1, flags=re.I)[-1]
+    return normalize_rc_status(tail)
+
+
+def rc_item_blocks(body: str) -> list[tuple[list[str], str]]:
+    """Return required-change list items, including wrapped continuation lines."""
+    lines = body.splitlines()
+    starts = [i for i, line in enumerate(lines) if RC_ITEM_START_RE.match(line)]
+    out: list[tuple[list[str], str]] = []
+    for start in starts:
+        end = len(lines)
+        for i in range(start + 1, len(lines)):
+            if MARKDOWN_LIST_START_RE.match(lines[i]):
+                end = i
+                break
+        ids = RC_ID_RE.findall(lines[start])
+        if ids:
+            out.append((ids, "\n".join(lines[start:end])))
+    return out
+
+
+def remediation_rounds(body: str) -> list[str]:
+    """Split `Remediation History` into ordered rounds for latest-state wins."""
+    lines = body.splitlines()
+    starts = [i for i, line in enumerate(lines) if ROUND_START_RE.match(line)]
+    if not starts:
+        return [body] if body.strip() else []
+    out: list[str] = []
+    for pos, start in enumerate(starts):
+        end = starts[pos + 1] if pos + 1 < len(starts) else len(lines)
+        out.append("\n".join(lines[start:end]))
+    return out
+
+
+def review_rc_statuses(text: str) -> tuple[set[str], dict[str, str]]:
+    """Collect current RC states without confusing history with the verdict.
+
+    The review template puts the current state at the end of each item in
+    `## Required Changes`.  Older artifacts and re-reviews also put it in a
+    `Result:` line under `## Remediation History`, sometimes several lines
+    after `IDs checked:`.  We parse the latter first and let an explicit
+    current Required Changes status win over historical prose.  This keeps a
+    preserved Round 0 `open` sentence from reopening a finding resolved in a
+    later round, while still blocking a finding whose current item is
+    explicitly open.
+    """
+    clean = strip_code_fences(text)
+    all_ids = set(RC_ID_RE.findall(clean))
+    statuses: dict[str, str] = {}
+
+    # Remediation rounds are ordered; a later result replaces an earlier one.
+    history = sections(clean).get("Remediation History", "")
+    for round_text in remediation_rounds(history):
+        lines = round_text.splitlines()
+        ids: set[str] = set()
+        for line in lines:
+            if re.search(r"\bids?\b|\bidentificadores?\b", line, re.I):
+                ids.update(RC_ID_RE.findall(line))
+        if not ids and lines:
+            ids.update(RC_ID_RE.findall(lines[0]))
+
+        state: str | None = None
+        for line in lines:
+            result = labeled_rc_status(line)
+            if result:
+                state = result
+                continue
+            # Round-0 artifacts sometimes say `IDs: RC-01 abierto` rather
+            # than using a Result label.  Restrict this fallback to ID lines.
+            if re.search(r"\bids?\b|\bidentificadores?\b", line, re.I):
+                state = normalize_rc_status(line.split(":", 1)[-1]) or state
+        if state:
+            for rc in ids:
+                statuses[rc] = state
+
+    # Compact per-ID summaries and explicit labels anywhere in the review are
+    # useful fallback evidence.  Required Changes below remains authoritative.
+    for line in clean.splitlines():
+        ids = RC_ID_RE.findall(line)
+        if not ids:
+            continue
+        state = labeled_rc_status(line) or direct_rc_status(line)
+        if state:
+            for rc in ids:
+                statuses[rc] = state
+
+    # Current findings are list items.  Their wrapped body may contain the
+    # status several lines after the RC identifier.
+    for ids, item in rc_item_blocks(sections(clean).get("Required Changes", "")):
+        state = None
+        for line in item.splitlines():
+            state = labeled_rc_status(line) or state
+        if state:
+            for rc in ids:
+                statuses[rc] = state
+
+    return all_ids, statuses
 
 
 def backticked(text: str) -> list[str]:
@@ -502,14 +656,14 @@ def check_reports_and_reviews(bundle: Path, rep: Report) -> None:
 
     for review in sorted(bundle.glob("*review*.md")):
         text = read(review)
-        ids = re.findall(r"`?(RC-\d{2,})`?", text)
+        ids, statuses = review_rc_statuses(text)
         if not ids:
             continue
-        for rc in sorted(set(ids)):
-            block = "\n".join(l for l in text.splitlines() if rc in l)
-            if re.search(r"status\s*:\s*(resolved|superseded|accepted)", block, re.I):
+        for rc in sorted(ids):
+            state = statuses.get(rc)
+            if state in {"resolved", "superseded", "accepted"}:
                 continue
-            if re.search(r"status\s*:\s*open", block, re.I):
+            if state == "open":
                 rep.blocker(review.name, f"`{rc}` sigue abierto",
                             "arréglalo, acéptalo con razón registrada, o decláralo abierto al usuario")
             else:
