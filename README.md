@@ -16,12 +16,15 @@ cuerpos canónicos           build   lo que se        install   ~/.claude
 
 ## El sistema en un párrafo
 
-Un coordinador triaja la petición al carril más ligero que sirva (Directo, Quick, Plan → Implementar
-→ Revisar, o Debug) y delega en especialistas de un solo propósito: explorador de código,
+Un coordinador concreta el resultado pedido y elige el siguiente especialista por la evidencia
+que falta, reevaluando después de cada retorno. Los carriles (Directo, Quick, Plan → Implementar
+→ Revisar, o Debug) organizan la entrega; no imponen una secuencia fija. Delega en explorador de código,
 investigador de integraciones, planificador, depurador de causa raíz, implementador BDD y revisor
 independiente, más un `advisor` de solo lectura para las decisiones difíciles. Nadie pega historial
 en el chat: los hechos duraderos viven en un bundle de artefactos Markdown bajo `plans/<slug>/`, con
-un dueño por artefacto y un `progress.md` como libro mayor. Ver [docs/DISENO.md](docs/DISENO.md).
+un dueño por artefacto y un `progress.md` como libro mayor. Las dudas que pueden cambiar la solución
+se resuelven antes de avanzar; una credencial, acceso o decisión del usuario pendiente bloquea el
+trabajo dependiente. Ver [docs/DISENO.md](docs/DISENO.md).
 
 ## Tabla de adaptadores
 

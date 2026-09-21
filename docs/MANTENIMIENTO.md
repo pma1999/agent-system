@@ -61,6 +61,11 @@ funcione: los permisos por rol (los globs de `edit`, la lista de `task` permitid
 en ejecución, y un glob mal puesto es invisible para cualquier comprobación estática. Después de
 tocar `adapter.toml`, ejercita al menos el harness afectado.
 
+Para cambios de decisiones del flujo, usar también los escenarios de
+[PRUEBAS-ENRUTAMIENTO.md](PRUEBAS-ENRUTAMIENTO.md). Una revisión manual de esos escenarios puede
+detectar contradicciones, pero no equivale a observar agentes en ejecución. Si el usuario excluye
+orquestación o subagentes, respetarlo y declarar ese límite de validación.
+
 **OpenCode** es el más fácil de guionizar, y en este equipo corre desde WSL:
 
 ```bash

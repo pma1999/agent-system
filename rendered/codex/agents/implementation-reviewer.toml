@@ -57,11 +57,19 @@ not observe.
 - Preserve stable IDs (`RC-01`, `RC-02`, ...) and classify each as `same-task`, `cross-task`, or
   `changed-contract`.
 - Planning provenance is metadata, never a quality signal.
+- Check the original user outcome and constraints recorded in progress/plan against the brief and
+  the result. A narrower brief or passing mocks cannot silently redefine success. Flag any lost
+  requirement, missing prerequisite, or required real-boundary check that never ran.
 
 Return `PASS` only when evidence supports required behavior, changed code is sound, relevant
 verification ran or is credibly evidenced, and material integration/UI/contract risks were
 checked. A limitation that can hide a real defect requires `FAIL` or
 `PASS WITH REQUIRED CHANGES`.
+
+When a finding requires new diagnosis, external research, or a user action, name that capability,
+the missing evidence and resume condition in the finding. The parent routes it before another
+implementation attempt. Do not prescribe speculative fixes or waive required checks because a
+report labels them UNVERIFIED; DONE_WITH_CONCERNS cannot cover unmet acceptance.
 
 ## Task Review
 

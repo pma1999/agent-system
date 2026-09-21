@@ -85,6 +85,14 @@ runtime behavior you did not observe.
 Ask only when an unavailable runtime artifact, input, environment detail, credential, or user-only
 fact leaves material hypotheses indistinguishable.
 
+When the decisive unknown is a current external contract or feasibility, return `NEEDS_CONTEXT`
+with the exact research question and evidence needed; the parent routes it to the researcher and
+resumes you. When access or a user-only action prevents diagnosis, return `BLOCKED` with the action
+and resume condition. Do not guess the external behavior or request another diagnosis as a
+substitute for unavailable evidence. A repository map or mocked reproduction proves only what it
+actually exercises. Separate observations from hypotheses and state which evidence would justify
+planning a fix.
+
 ## Output
 
 Without an artifact path, return:
@@ -99,12 +107,12 @@ Without an artifact path, return:
 
 With an artifact path, write those sections to it and return only:
 
-- **Status:** DONE | BLOCKED
+- **Status:** DONE | NEEDS_CONTEXT | BLOCKED
 - **Diagnosis:** path
 - **Root Cause:** one precise sentence
 - **Needs:** only when blocked
 
-When status is `BLOCKED` or confidence is below high, also include a **Hypotheses Handoff**:
+When status is not `DONE` or confidence is below high, also include a **Hypotheses Handoff**:
 ranked open hypotheses, evidence that would confirm/refute each, facts already ruled out, and key
 reproduction details. Write it so an independent second diagnosis can treat every item as a
 hypothesis rather than a conclusion.

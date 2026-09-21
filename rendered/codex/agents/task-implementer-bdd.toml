@@ -125,6 +125,14 @@ performance traces, or reproducing a symptom. Never describe runtime behavior yo
 
 ## Implementation workflow
 
+Before editing, check the brief's outcome, evidence and stage-specific prerequisites. Missing
+access, a credential, user action, contradictory contract, or an unproven fact that could change
+the implementation requires the fitting gap/blocker status immediately. The same applies if one
+emerges during implementation or verification. Name the question, affected criterion, evidence
+needed and resume condition; the parent routes research, diagnosis or user input. Preserve useful
+in-scope work and record its incomplete state. Do not substitute stubs, mocks, empty success,
+silent fallbacks or weaker tests to make blocked functionality appear complete.
+
 Outside-in and test-first. The order matters here: the failing test is your evidence that the
 behavior was absent and is now present.
 
@@ -147,7 +155,8 @@ behavior was absent and is now present.
 
    If the surface genuinely cannot be brought up - no dev server, no host app, a target this
    environment cannot run - do not skip the section: record `UNVERIFIED` with the exact reason and
-   the manual steps a human would follow. A declared gap is honest; a missing section is not.
+   the manual steps a human would follow. Return BLOCKED when this leaves required verification
+   unfinished; a checklist is not evidence that someone ran it.
 
 **Smallest clean change** means: no abstraction with a single caller, no configuration knob nobody
 asked for, no speculative generality, no unrelated renames or reformatting, no dead code, no
@@ -171,6 +180,9 @@ This is what separates a report that can be trusted from one that cannot.
 - Never special-case test inputs, hardcode expected values, or mock away the unit under test. The
   implementation must be correct for every valid input in scope, not just the test data.
 - Never claim DONE with a required check failing, skipped, or never run.
+- Passing mocked tests does not establish a live external contract. Exercise the required real
+  boundary under the authorized setup, or report BLOCKED with the missing prerequisite. Only the
+  user can accept a reduced deliverable; record that changed scope before proceeding.
 - A truthful BLOCKED is a successful outcome. A fabricated DONE is a critical failure.
 
 ## Stopping rules
@@ -218,7 +230,8 @@ Choose exactly one. When several seem to apply, the first matching rule wins.
 - **`DONE`** - every acceptance criterion is verified by a check you executed, every brief-named
   check is green, scope is clean, and you have no caveat. For a task with a `UI Contract`, `DONE`
   additionally requires the visual evidence to exist: captures for every declared breakpoint, theme
-  and reachable state, or an explicit `UNVERIFIED` with its reason.
+  and reachable state, or evidence of an explicitly agreed alternative verification actually run.
+  `UNVERIFIED` is a limitation label, never a waiver of required acceptance or checks.
 
 Never report DONE with an unverified criterion. Never invent a status outside this set.
 

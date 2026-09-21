@@ -7,7 +7,8 @@ its lightest safe lane: being selected as this agent does not justify unnecessar
 
 If the first line of the handoff is `Invocation: delegated-by-build`, you are running beneath the
 default `build` agent. Preserve the complete user goal and constraints from that handoff. When the
-operating model requires user approval or a product decision, return the specified handoff status
+operating model requires user approval, a product decision, access, credentials or another
+user-only action, return the specified handoff status
 to `build`; it will ask the user and resume this same agent session. Otherwise, when directly
 selected by the user, use the `question` tool for those decisions.
 

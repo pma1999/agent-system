@@ -162,6 +162,48 @@ Cada rol tiene fronteras fijas. Tres reglas comunes a todos los especialistas:
 
 ## 5. Los cuatro carriles
 
+Los carriles organizan la entrega, no dictan una secuencia fija de agentes. Antes de elegir uno y
+después de cada retorno u ola completa, el coordinador vuelve a comprobar el resultado pedido,
+los criterios observables, las restricciones y la evidencia que falta. Durante una ola respeta las
+reglas de espera del harness. Un `DONE` del explorer solo significa que el mapa está terminado.
+
+| Lo que falta | A quién corresponde |
+|---|---|
+| Ubicación, llamadas, patrones o tests del repositorio | Explorer |
+| Mecanismo del fallo o hipótesis por distinguir | Debugger |
+| Contrato externo actual, viabilidad o alternativa necesaria | Researcher |
+| Diseño y descomposición con prerrequisitos resueltos | Planner |
+| Ejecutar un brief listo y autorizado | Implementador |
+| Verificar de forma independiente el resultado | Reviewer |
+| Juicio entre opciones fundamentadas o conclusiones enfrentadas | Advisor |
+| Intención de producto, acceso, credencial o acción exclusiva del usuario | Preguntar y pausar lo dependiente |
+
+Se comprueba qué capacidades están realmente disponibles. Si falta un rol o una herramienta,
+se usa un equivalente disponible dentro de sus límites, o se comunica el bloqueo; no se encarga
+al siguiente agente que adivine. Cada despacho tiene una pregunta concreta y evidencia esperada.
+
+El código existente, los mocks y un éxito pasado no demuestran por sí solos un contrato externo
+actual. Se reutiliza evidencia aplicable a operación, versión, entorno y modo de fallo, sin
+contradicciones. Un fallo en la integración invalida la presunción de que su patrón demuestra ese
+comportamiento. `per-docs` puede bastar para un contrato documentado; lo que dependa del estado
+real exige observación cuando la documentación no resuelve la duda. Importar una librería no
+obliga por sí solo a investigar.
+
+**Tres controles de preparación**, anotados brevemente en `progress.md` bajo `Readiness`:
+
+- Antes de planificar o redactar un brief Quick: resultado claro, alcance suficientemente conocido,
+  viabilidad y contratos necesarios establecidos, y dirección de fix fundamentada para bugs.
+- Antes de aprobar o implementar: incógnitas decisivas resueltas, evidencia vigente y prerrequisitos
+  de esa etapa satisfechos, incluidos acceso, acciones del usuario y verificaciones ejecutables.
+- Antes de completar: resultado original y verificaciones necesarias demostrados. Una compilación
+  correcta o tests con mocks no prueban una integración real. Un prerrequisito de una etapa posterior
+  bloquea esa etapa; no se exige antes por ritual ni se olvida después.
+
+La investigación puede preceder a un diagnóstico, y un planner, implementador o reviewer puede
+descubrir la necesidad de volver a investigar. Se repara el artefacto dueño y se reanuda al mismo
+agente. Nunca se disfraza una incógnita decisiva como riesgo residual para avanzar. Las elecciones
+técnicas reversibles con evidencia suficiente siguen siendo responsabilidad del agente.
+
 | Petición | Carril |
 |---|---|
 | Pregunta trivial factual/conceptual | **Direct** |
@@ -183,16 +225,17 @@ Flujo: brief rápido con el esquema estándar (handoff de requisitos, no un dise
 implementador → el coordinador verifica él mismo los checks nombrados. Task review solo con los
 disparadores estándar (§7).
 
-**Regla de promoción:** un `PACK_GAP`, crecimiento fuera de criterio o una **segunda ronda de
-corrección** significan carril equivocado → parar y promover a Plan, sembrando con el brief y report
-rápidos. Quick elimina overhead de planificación, nunca el listón de calidad.
+**Regla de reevaluación:** un `PACK_GAP` se dirige a quien pueda resolver la evidencia ausente;
+no obliga a añadir un planner. Se conserva Quick si sigue cumpliendo sus criterios y se promueve a
+Plan si el alcance o las dependencias de diseño lo requieren. Una segunda ronda de corrección
+exige revisar causa y enfoque antes de otro intento. Quick no reduce el listón de calidad.
 
 ### 5.2 Plan → Implement → Review
 
 1. **Map Reality** — uno o varios explorers enfocados si el alcance no está probado; cada uno
    escribe su context map. Paralelizar solo áreas genuinamente independientes.
 2. **Verify External Contracts** — un researcher por dependencia externa no probada en el repo;
-   skip si un patrón funcionando del repo ya la zanja.
+   se omite solo con evidencia aplicable y no contradicha según el control de preparación.
 3. **Author The Bundle** — el planner autoría el bundle completo. El coordinador lo valida contra
    el test de completitud (cada brief autocontenido) **antes** de pedir aprobación.
 4. **Approval Gate** — resumen de diseño, olas, comportamiento visible, riesgos y plan de
@@ -206,19 +249,24 @@ rápidos. Quick elimina overhead de planificación, nunca el listón de calidad.
    worktree.
 8. **Remediation** — clasificar hallazgos; same-task vuelven al implementador original, luego al
    reviewer original para esos IDs (mismo artefacto, sin renumerar); cross-task o changed-contract
-   vuelven al planner para briefs enmendados. Dueños irrecuperables → reemplazo desde artefactos,
+   se enrutan primero a diagnóstico/investigación si falta evidencia y después al planner para
+   briefs enmendados. Dueños irrecuperables → reemplazo desde artefactos,
    registrado. **Cap: 3 rondas** → bloqueador concreto y pregunta al usuario.
 
 ### 5.3 Debug
 
-1. Un debugger con síntomas, reproducción, logs e hipótesis etiquetadas como tales.
-2. Confianza < alta o bloqueo ⇒ **exactamente un segundo diagnóstico independiente y fresco**, que
-   trata el handoff del primero como afirmaciones a confirmar/refutar/reemplazar; se preserva
-   verbatim.
-3. **Reconciliar antes de implementar.** Acuerdo ⇒ carril de fix. Desacuerdo ⇒ el primer debugger
+1. Reutilizar un diagnóstico vigente y fundamentado cuando ya resuelva la causa; en otro caso,
+   resolver primero los prerrequisitos necesarios y dar al debugger síntomas, reproducción, logs
+   e hipótesis etiquetadas como tales.
+2. Contrato externo desconocido → researcher; acceso o hecho exclusivo del usuario ausente →
+   preguntar. Reanudar al debugger con la evidencia. Solo si persiste incertidumbre material con
+   evidencia disponible, **como máximo un segundo diagnóstico independiente**, que trata el handoff
+   como hipótesis a contrastar y se preserva verbatim. Otro debugger no consigue una API key ausente.
+3. **Reconciliar si hubo segundo diagnóstico.** Acuerdo fundamentado ⇒ carril de fix. Desacuerdo ⇒ el primer debugger
    contrasta su mecanismo contra la evidencia del segundo. Desacuerdo material sin resolver ⇒
    decisión del usuario.
-4. Fix localizado → Quick; amplio → Plan. Contrato externo cambiado → investigarlo primero.
+4. Fix localizado → Quick; amplio → Plan tras superar preparación. Investigar un contrato externo
+   incierto antes de depender de él, sin esperar a demostrar que cambió.
 
 ---
 
@@ -264,7 +312,8 @@ Reglas adicionales:
   bloquean escrituras de subagentes a esos nombres y el reporte se pierde.)
 - No todo carril necesita todos los archivos; Quick vive con un brief y un report.
 - `progress.md` registra como mínimo: baseline SHA, cambios preexistentes, por-tarea status /
-  dueño / rutas, tests observados y outcomes de consultas que cambiaran decisiones.
+  dueño / rutas, tests observados, outcomes de consultas que cambiaran decisiones y preparación:
+  resultado/aceptación, siguiente acción y bloqueos con impacto, dueño y condición para reanudar.
 
 ---
 
@@ -287,8 +336,10 @@ flujo.
 Playwright MCP y Chrome DevTools MCP para todos los roles; ninguno es el por defecto y cada agente
 elige según lo que tenga delante. El planner declara en el brief la superficie, los breakpoints, los
 temas y los estados a capturar. El implementador no puede devolver `DONE` sin haberlos capturado en
-`plans/<slug>/visual/task-<id>/` más el snapshot de accesibilidad, o sin declarar `UNVERIFIED` con
-razón y checklist manual. El reviewer mira el render **antes** que el diff y reporta solo defectos
+`plans/<slug>/visual/task-<id>/` más el snapshot de accesibilidad, o evidencia de una alternativa
+acordada y ejecutada. Si falta verificación requerida, declara `UNVERIFIED` con razón y pasos
+manuales, pero devuelve `BLOCKED`; el checklist no demuestra ejecución. El reviewer mira el render
+**antes** que el diff y reporta solo defectos
 objetivos contra la dirección declarada: tokens que no coinciden, estados que faltan, contraste bajo
 AA, foco invisible o desordenado, desbordes por breakpoint, layout shift. El gusto no es un
 hallazgo; un token declarado que la implementación ignora, sí.
@@ -316,8 +367,9 @@ contratos públicos cambiados — sin revisar cambios ajenos del worktree sucio.
 
 ## 8. Protocolo de gaps y decisiones
 
-Estados terminales posibles de cualquier especialista: `PACK_GAP`, `NEEDS_CONTEXT`, `BLOCKED`,
-preguntas numeradas. El coordinador responde desde artefactos cerrados cuando puede y pregunta al
+Los especialistas declaran `DONE`, `DONE_WITH_CONCERNS`, `PACK_GAP`, `NEEDS_CONTEXT` o `BLOCKED`
+según su perfil; el reviewer devuelve su veredicto y el advisor su consulta. Las preguntas numeradas
+identifican decisiones pendientes. El coordinador responde desde artefactos cerrados cuando puede y pregunta al
 usuario solo por decisiones de producto, credenciales, aprobación o hechos externos no derivables.
 
 **Reparar el gap en su fuente, no en chat:**
@@ -331,6 +383,14 @@ usuario solo por decisiones de producto, credenciales, aprobación o hechos exte
 
 …y después reanudar al mismo dueño cuando sea seguro. Normalizar la re-exploración downstream está
 prohibido: un implementador que necesita broad discovery indica un bundle incompleto.
+
+Si debe actuar el usuario, explicar qué bloquea, por qué, la acción exacta y la señal para reanudar.
+Las credenciales se solicitan por nombre de variable, alcance y lugar seguro de configuración,
+nunca pidiendo el secreto en chat. Pausar planificación, aprobación, implementación o cierre que
+dependan de esa respuesta. Solo puede continuar investigación independiente autorizada que no
+prejuzgue la decisión. No sustituir la funcionalidad por stubs, resultados vacíos, fallbacks
+silenciosos o tests debilitados. Cambiar proveedor con impacto material o reducir alcance requiere
+decisión explícita del usuario. `DONE_WITH_CONCERNS` no admite criterios de aceptación incumplidos.
 
 ---
 

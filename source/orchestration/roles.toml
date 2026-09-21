@@ -20,12 +20,12 @@ description = "Use when the {{WORKFLOW}} needs a front-loaded, token-lean map of
 [[role]]
 name = "integration-researcher"
 harnesses = ["claude", "codex", "opencode"]
-description = "Use when the {{WORKFLOW}} needs a current external contract not already proven in the repo: a third-party API, SDK, library, CLI, or scraping target. Verifies the needed surface, writes an Integration Recipe, and never writes production code."
+description = "Use whenever a material external contract or feasibility is uncertain: API, SDK, library, CLI, scraping target, or a failing existing integration. Verifies current behavior and viable alternatives when needed, records prerequisites and blockers in an Integration Recipe, and never writes production code."
 
 [[role]]
 name = "implementation-planner"
 harnesses = ["claude", "codex", "opencode"]
-description = "Use when the {{WORKFLOW}} needs the design and dispatch-ready plan bundle for a new feature, non-trivial change, or raw idea. Consumes context maps and integration recipes, writes plans/<slug>/ with design, constraints, task briefs, and progress, and never writes production code."
+description = "Use when the {{WORKFLOW}} needs design and dispatch-ready briefs with material prerequisites settled. Consumes requirements, context maps, diagnoses and integration recipes; returns gaps when evidence is missing instead of planning on assumptions. Writes plans/<slug>/ only, never production code."
 
 [[role]]
 name = "root-cause-debugger"
