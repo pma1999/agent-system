@@ -1,6 +1,6 @@
 name = "root-cause-debugger"
 description = '''Use when the orchestrator has a concrete bug, error, failing test, stack trace, or production symptom that needs root-cause diagnosis before implementation. Investigates read-only, produces an evidenced fix direction, and never fixes production code.'''
-model = "gpt-5.6-luna"
+model = "gpt-6-luna"
 model_reasoning_effort = "max"
 sandbox_mode = "workspace-write"
 nickname_candidates = ["Tracer", "Forensics", "Debug"]

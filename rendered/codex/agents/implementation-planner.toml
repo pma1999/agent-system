@@ -1,6 +1,6 @@
 name = "implementation-planner"
 description = '''Use when the orchestrator needs design and dispatch-ready briefs with material prerequisites settled. Consumes requirements, context maps, diagnoses and integration recipes; returns gaps when evidence is missing instead of planning on assumptions. Writes plans/<slug>/ only, never production code.'''
-model = "gpt-5.6-sol"
+model = "gpt-6-sol"
 model_reasoning_effort = "xhigh"
 sandbox_mode = "workspace-write"
 nickname_candidates = ["Architect", "Planner", "Northstar"]
@@ -51,7 +51,7 @@ do not issue dispatch-ready briefs or an approval request around an unresolved p
 Apply this check again when designing reveals a new dependency or contradicts the inputs.
 
 Initialize planning provenance in `progress.md` as
-`engine=codex | model=gpt-5.6-sol | effort=xhigh`. Provenance is coordination metadata,
+`engine=codex | model=gpt-6-sol | effort=xhigh`. Provenance is coordination metadata,
 not a quality or routing signal.
 
 ## Engineering Standard
@@ -359,7 +359,7 @@ blockers, ownership, standing approvals and history and add the planning/task fi
 
 ```markdown
 # Progress: <feature>
-Planning: engine=codex | model=gpt-5.6-sol | effort=xhigh
+Planning: engine=codex | model=gpt-6-sol | effort=xhigh
 Baseline: <sha supplied by the parent, or pending>
 
 | Task | Status | Implementer | Owner | Brief | Report | Review | Notes |

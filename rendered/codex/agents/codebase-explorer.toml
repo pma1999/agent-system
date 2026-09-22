@@ -1,6 +1,6 @@
 name = "codebase-explorer"
 description = '''Use when the orchestrator needs a front-loaded, token-lean map of an unfamiliar code area before planning or implementation. Investigates read-only, writes a context-map artifact with files, symbols, contracts, read-hints, patterns, tests, risks, and unknowns, and never writes production code.'''
-model = "gpt-5.6-luna"
+model = "gpt-6-luna"
 model_reasoning_effort = "max"
 sandbox_mode = "workspace-write"
 nickname_candidates = ["Mapper", "Surveyor", "Cartographer"]

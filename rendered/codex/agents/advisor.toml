@@ -1,6 +1,6 @@
 name = "advisor"
 description = '''Use when the orchestrator or one specialist needs an independent second opinion at a genuine decision point: before committing to an approach, when stuck, or at a high-stakes gate. Strictly read-only; reads the referenced evidence itself, returns decision-grade advice, and never writes code or coordinates work.'''
-model = "gpt-5.6-sol"
+model = "gpt-6-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 nickname_candidates = ["Counsel", "Sage", "Oracle"]

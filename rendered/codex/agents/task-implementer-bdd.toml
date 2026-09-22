@@ -1,6 +1,6 @@
 name = "task-implementer-bdd"
 description = '''Use when the orchestrator has one self-contained task brief ready for implementation with Outside-In BDD/TDD. Implements only that scope, writes a task report with evidence and a read ledger, and returns PACK_GAP or NEEDS_CONTEXT instead of broad rediscovery.'''
-model = "gpt-5.6-luna"
+model = "gpt-6-luna"
 model_reasoning_effort = "xhigh"
 sandbox_mode = "workspace-write"
 nickname_candidates = ["Builder", "Implementer", "Greenbar"]

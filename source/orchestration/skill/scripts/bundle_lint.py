@@ -25,8 +25,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -107,6 +109,37 @@ COMMON_REPO_DIRS = {
     "lib", "migrations", "packages", "pages", "prisma", "public", "rendered", "routes",
     "scripts", "source", "src", "styles", "tests", "test", "types",
 }
+
+# Directories never searched by the suffix fallback or the bundle inventory:
+# version control, dependencies, build outputs and caches.  On slow mounts
+# (WSL DrvFs under /mnt/c) an unfiltered recursive walk hangs the lint.
+SKIP_DIRS = frozenset({
+    ".git", "node_modules", ".venv", "venv", "__pycache__",
+    "target", "dist", "build", ".next", ".codegraph", "coverage",
+})
+
+# Safety budgets for the suffix fallback below.  Hitting either means the
+# tree is too big (or the mount too slow) to prove absence: the lookup
+# degrades to "not disproven" and run() records a WARN instead of hanging.
+# The walk is name-only and never reads file contents, so these budgets (not
+# a file-size cutoff, which could hide a real file and forge a BLOCKER) are
+# what bounds the I/O.
+_MAX_SUFFIX_WALK_ENTRIES = 200_000
+_MAX_SUFFIX_WALK_SECONDS = 10.0
+
+# Per-run cache: (repo root, path suffix) -> exists.  A bundle names the
+# same missing path in several briefs/sections; without this each lookup
+# pays a full walk.  Keyed by absolute repo so two worktrees never share
+# verdicts.
+_PATH_SUFFIX_CACHE: dict[tuple[str, str], bool] = {}
+# Suffixes whose walk exhausted a budget this run (existence unproven).
+_SUFFIX_WALK_DEGRADED: set[tuple[str, str]] = set()
+
+
+def clear_path_cache() -> None:
+    """Reset the suffix cache (tests; a fresh process starts empty anyway)."""
+    _PATH_SUFFIX_CACHE.clear()
+    _SUFFIX_WALK_DEGRADED.clear()
 
 
 # ---------------------------------------------------------------- model
@@ -395,6 +428,75 @@ def candidate_paths(text: str) -> list[str]:
     return uniq
 
 
+def _any_suffix_exists(repo: Path, wanted: set[tuple[str, str]]) -> bool:
+    """One bounded walk answering every suffix variant of a single lookup.
+
+    Returns True when a match proves presence *or* when a safety budget
+    fires first (absence unproven: never a blocker, run() warns).  Results
+    are cached per (repo, suffix) so repeated briefs never re-walk.
+    Skips SKIP_DIRS and never follows symlinks.
+    """
+    uncached = sorted(w for w in wanted if w not in _PATH_SUFFIX_CACHE)
+    if not uncached:
+        return any(_PATH_SUFFIX_CACHE[w] for w in wanted)
+    names = {name for name, _ in uncached}
+    suffixes: dict[str, list[str]] = {}
+    for name, suffix in uncached:
+        suffixes.setdefault(name, []).append(suffix)
+
+    deadline = time.monotonic() + _MAX_SUFFIX_WALK_SECONDS
+    seen = 0
+    truncated = False
+    stack = [repo]
+    while stack:
+        if time.monotonic() > deadline:
+            truncated = True
+            break
+        current = stack.pop()
+        try:
+            with os.scandir(current) as it:
+                items = []
+                for entry in it:
+                    try:
+                        is_dir = entry.is_dir(follow_symlinks=False)
+                    except OSError:
+                        continue
+                    items.append((entry.name, entry.path, is_dir))
+        except OSError:
+            continue
+        for entry_name, entry_path, is_dir in items:
+            seen += 1
+            if seen > _MAX_SUFFIX_WALK_ENTRIES:
+                truncated = True
+                break
+            if is_dir:
+                if entry_name in SKIP_DIRS:
+                    continue
+                stack.append(Path(entry_path))
+            elif entry_name in names:
+                try:
+                    rel = Path(entry_path).relative_to(repo).as_posix()
+                except ValueError:
+                    continue
+                for suffix in suffixes[entry_name]:
+                    if rel.endswith(suffix):
+                        _PATH_SUFFIX_CACHE[(entry_name, suffix)] = True
+                        return True
+        if truncated:
+            break
+
+    if truncated:
+        # Absence unproven: treat as present (no false blocker) but leave a
+        # marker so run() degrades to WARN instead of silently passing.
+        for key in uncached:
+            _PATH_SUFFIX_CACHE[key] = True
+            _SUFFIX_WALK_DEGRADED.add(key)
+        return True
+    for key in uncached:
+        _PATH_SUFFIX_CACHE[key] = False
+    return False
+
+
 def path_exists(repo: Path, rel: str) -> bool:
     rel = normalize_path_token(rel).replace("\\", "/").lstrip("./")
     if not rel:
@@ -406,19 +508,25 @@ def path_exists(repo: Path, rel: str) -> bool:
         variants.extend(target / f"index{ext}" for ext in MODULE_EXTENSIONS)
     if any(candidate.exists() for candidate in variants):
         return True
-    # A brief may address a file by a suffix of its real path.
-    try:
-        for variant in variants:
-            name = variant.name
-            if not name:
-                continue
+    # A brief may address a file by a suffix of its real path.  One bounded
+    # walk covers every variant: the old unfiltered `repo.rglob(name)` hung
+    # on slow mounts by strolling through .git/node_modules/.venv.
+    wanted = set()
+    for variant in variants:
+        name = variant.name
+        if not name:
+            continue
+        try:
             suffix = variant.relative_to(repo).as_posix()
-            for hit in repo.rglob(name):
-                if str(hit.relative_to(repo).as_posix()).endswith(suffix):
-                    return True
+        except ValueError:
+            continue
+        wanted.add((name, suffix))
+    if not wanted:
+        return False
+    try:
+        return _any_suffix_exists(repo, wanted)
     except OSError:
         return False
-    return False
 
 
 # ---------------------------------------------------------------- checks
@@ -712,12 +820,45 @@ def check_reports_and_reviews(bundle: Path, rep: Report) -> None:
                 rep.warn(review.name, f"`{rc}` no declara Status resolved/open/superseded")
 
 
+def _bundle_files(bundle: Path) -> list[Path]:
+    """Files under *bundle* in sorted order, skipping SKIP_DIRS.
+
+    Replaces an unfiltered `bundle.rglob("*")`: a bundle never owns
+    node_modules/.git, but a stray one used to drag the lint through
+    thousands of vendored files on slow mounts.  Never follows symlinks,
+    mirroring rglob's default.
+    """
+    found: list[Path] = []
+    stack = [bundle]
+    while stack:
+        current = stack.pop()
+        try:
+            with os.scandir(current) as it:
+                items = []
+                for entry in it:
+                    try:
+                        is_dir = entry.is_dir(follow_symlinks=False)
+                    except OSError:
+                        continue
+                    items.append((entry.name, entry.path, is_dir))
+        except OSError:
+            continue
+        for entry_name, entry_path, is_dir in sorted(items):
+            if is_dir:
+                if entry_name in SKIP_DIRS:
+                    continue
+                stack.append(Path(entry_path))
+            else:
+                found.append(Path(entry_path))
+    return sorted(found)
+
+
 def check_naming_and_leftovers(bundle: Path, rep: Report) -> None:
     known = re.compile(
         r"^(context-map|plan|global-constraints|progress|final-review|brief|"
         r"integration-.+|task-\d{1,3}[a-z]?-(brief|report|review)|"
         r"debug-diagnosis|second-diagnosis-.+|advisor-.+)$", re.I)
-    for p in sorted(bundle.rglob("*")):
+    for p in _bundle_files(bundle):
         if not p.is_file():
             continue
         rel = p.relative_to(bundle).as_posix()
@@ -737,6 +878,7 @@ def check_naming_and_leftovers(bundle: Path, rep: Report) -> None:
 
 def run(bundle: Path, repo: Path, phase: str) -> Report:
     rep = Report()
+    _SUFFIX_WALK_DEGRADED.clear()
     plan_text = strip_code_fences(read(bundle / "plan.md")) if (bundle / "plan.md").exists() else ""
 
     briefs = sorted(bundle.glob("task-*-brief.md")) + sorted(bundle.glob("brief.md"))
@@ -768,6 +910,11 @@ def run(bundle: Path, repo: Path, phase: str) -> Report:
 
     check_progress(bundle, rep, pre_synthesis)
     check_naming_and_leftovers(bundle, rep)
+    if _SUFFIX_WALK_DEGRADED:
+        rep.warn("bundle",
+                 f"búsqueda por sufijo truncada en {len(_SUFFIX_WALK_DEGRADED)} "
+                 "ruta(s): árbol grande o montaje lento; la ausencia no se pudo demostrar",
+                 "usa rutas exactas en el brief en vez de sufijos")
     rep.note("ledger, convención de nombres y restos temporales")
     rep.number()
     return rep

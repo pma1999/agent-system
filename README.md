@@ -43,7 +43,7 @@ mismo texto, y `verify` lo demuestra en cada ejecución.
 | `ASK_USER` | tool `AskUserQuestion` | pregunta directa en el hilo | tool `question` |
 | `ADVISOR_DELEGATION` | tool nativa `advisor()` | subagente vía `spawn_agent` + `fork_turns="all"` | subagente vía `task` + plugin `advisor-context` |
 | `ROSTER_ADVISOR` | fila "tool nativa" | fila de despacho | fila de despacho |
-| `PROVENANCE` | `engine=claude-code \| model=opus` | `engine=codex \| model=gpt-5.6-sol` | `engine=opencode \| model=muse-spark-1.3` |
+| `PROVENANCE` | `engine=claude-code \| model=opus` | `engine=codex \| model=gpt-6-sol` | `engine=opencode \| model=muse-spark-1.3` |
 | `MODEL_PIN` | perfil por rol en cada fichero | perfil por rol en cada TOML | roster entero a muse-spark-1.3/xhigh |
 | `MODEL` / `EFFORT` | por rol, en `[agents.<rol>]` | idem, se renderiza como `model_reasoning_effort` | idem, se renderiza como `variant` |
 | `BUNDLE_LINT` | `python ~/.claude/skills/orchestrator/scripts/bundle_lint.py` | `python ~/.codex/skills/orchestrator/scripts/bundle_lint.py` | `python ~/.config/opencode/skills/opencode-orchestrator/scripts/bundle_lint.py` |
@@ -159,7 +159,7 @@ python bin/agentsys.py models list                              # perfiles de lo
 python bin/agentsys.py models show ox-alpha-free-max --harness opencode
 python bin/agentsys.py models apply ox-alpha-free-max --harness opencode
 python bin/agentsys.py models set --harness claude --model opus --effort xhigh
-python bin/agentsys.py models set --harness codex --model gpt-5.6-sol --role implementation-planner
+python bin/agentsys.py models set --harness codex --model gpt-6-sol --role implementation-planner
 python bin/agentsys.py models save mi-perfil --harness opencode -m "por que lo guardo"
 ```
 
