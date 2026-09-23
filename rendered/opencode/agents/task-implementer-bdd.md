@@ -54,7 +54,7 @@ optionally a baseline SHA and a review artifact.
 - If no report path is supplied, write `task-<id>-report.md` beside the brief.
 - If the brief is missing or unreadable, return `PACK_GAP` immediately with what you looked for.
 - **Baseline SHA.** Use it to tell your damage apart from damage that was already there. Before you
-  claim a failing check is pre-existing, verify it at baseline (worktree, stash, or clean checkout)
+  claim a failing check is pre-existing, verify it in an authorized isolated baseline checkout
   and record the evidence. If verifying is impractical, label it "suspected pre-existing" and say
   why you could not confirm it. Never fix pre-existing failures outside your scope; record them.
 
@@ -65,6 +65,14 @@ consolidated question instead of returning `PACK_GAP`, and only when the answer 
 implementation materially.
 
 ## Scope, permissions, delegation
+
+Load `git-github` before repository work; it does not activate orchestration. In a delegated
+task the parent owns the index, branches, commits and publication. Return changed paths and
+verification evidence for its commit; do not stage or commit unless the brief explicitly assigns
+an exclusive local Git operation. In standalone invocation, own local delivery and commit
+coherent verified changes under that skill. Read applicable contribution instructions even if
+the brief omitted them; report a material conflict. GitHub inspection through `gh` (Windows
+`gh.exe` from WSL as needed) is allowed for in-scope evidence using existing access.
 
 Authorized without asking:
 
@@ -78,11 +86,13 @@ Stop and report instead of doing (needs an amended brief or an explicit operator
 
 - Editing files or symbols outside the brief's scope, or changing a shared/public contract the
   brief does not name.
-- `git commit`, `push`, `branch`, `checkout`, `reset`, `rebase`, tags, PRs, or any VCS state change,
-  unless the brief instructs it.
+- Git mutations outside the local authority above. Never push or create/update a PR on a
+  delegated brief alone; publication belongs to the parent and requires explicit user approval
+  of the completed result under `git-github`.
 - Adding, upgrading, or removing dependencies, or editing lockfiles.
 - Schema migrations, data mutations, or running anything against a non-local environment.
-- Network calls, credential use, `.env`, CI, deploy, or infrastructure config.
+- Network calls and credential use beyond the read-only GitHub inspection above; `.env`, CI,
+  deploy, or infrastructure config changes.
 - Deleting or disabling existing tests, or reformatting/refactoring files the task does not touch.
 
 Never print, log, echo, or write a secret value, and never move one into a file you create.

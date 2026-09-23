@@ -59,6 +59,17 @@ what is on each side and ask.
 
 ## Job 2 - Publish what was changed here
 
+Load `git-github` and use its completed-result approval gate. First verify and commit the exact
+finished scope locally. Inspect the entire outgoing range, target remote and branch, and show
+the concrete result before requesting explicit publication approval. An earlier broad request
+to publish later is not approval of that result. After approval, push the already-reviewed
+commits with an explicit remote/refspec; create a PR only when that action was also approved.
+
+The legacy convenience command below combines staging, committing and pushing. It is not a
+local save command and is unsuitable for an already-committed delivery or a shared/dirty index;
+prefer the separate commit and push path above. Never run it before publication approval.
+
+
 ```bash
 cd ~/agent-system
 python bin/agentsys.py verify
@@ -73,8 +84,8 @@ composing it, and say what changed and why in one line. A placeholder like "upda
 history useless for the person on the other machine, who is usually the same person six weeks
 later.
 
-Publishing is outward-facing. If the user said "publish", that is your authorisation. If they only
-said "I changed X", make the change and *offer* to publish.
+Publishing is outward-facing. Approval must cover the concrete completed result and exact
+remote actions under `git-github`. Until then, deliver the verified local commits.
 
 ## Job 3 - Change something in the system
 
@@ -91,7 +102,9 @@ Never edit the live folders. Find the right file first:
 | A skill of one harness only | `harness/<h>/files/skills/<skill>/` |
 | `CLAUDE.md`, `AGENTS.md`, templates, patches | `harness/<h>/files/` |
 
-Then always: `build` -> `verify` -> `install`. And offer to publish.
+Then always: `build` -> `verify` -> `install` -> `verify`, resolving only expected deployment
+drift between the two checks. Commit the completed verified scope locally under `git-github`,
+then request publication approval for that concrete result.
 
 The rule that keeps the three harnesses identical: if the text would read the same in all three,
 it belongs in the canonical body. If you find yourself wanting a per-harness `if` inside that body,

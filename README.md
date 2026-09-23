@@ -131,7 +131,8 @@ cd ~/agent-system
 python bin/agentsys.py build      # source/ + harness/  ->  rendered/
 python bin/agentsys.py verify     # las cuatro comprobaciones
 python bin/agentsys.py install    # rendered/  ->  carpetas vivas
-python bin/agentsys.py publish -m "resumen real del cambio"
+# Commit local de los ficheros revisados, siguiendo la skill git-github.
+# Solo tras aprobación explícita del resultado terminado: push al destino acordado.
 ```
 
 En Windows, `pwsh -NoProfile -File "$HOME/agent-system/bin/install.ps1"` hace pull + build +
@@ -181,6 +182,20 @@ es estado local de cada máquina que no viaja en el repo. Por eso:
 | `both` | los dos |
 
 Con `--omo-preset <nombre>` se apunta a un preset distinto del activo.
+
+## Git y GitHub
+
+La skill compartida [git-github](source/skills/git-github/SKILL.md) define la entrega tanto directa
+como orquestada. El coordinador es dueño del índice y de los commits; los especialistas entregan
+cambios y evidencia. Se hacen commits locales de unidades coherentes verificadas, entre olas,
+sin incluir cambios ajenos ni artefactos internos salvo que el repositorio los requiera.
+
+Publicar exige terminar el resultado, presentar destino, commits, validación y texto de PR, y
+obtener aprobación explícita para esas acciones. Las convenciones de contribución del repositorio
+se consultan antes; los mensajes explican el cambio para sus mantenedores. La skill incluye
+consultas con `gh` y ejecución de `gh.exe` de Windows desde WSL. Estas son instrucciones de los
+agentes, no un bloqueo técnico de todas las herramientas Git. Los escenarios de comprobación
+están en [PRUEBAS-GIT.md](docs/PRUEBAS-GIT.md).
 
 ## El gate de validación del bundle
 

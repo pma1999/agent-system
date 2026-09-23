@@ -85,7 +85,8 @@ report labels them UNVERIFIED; DONE_WITH_CONCERNS cannot cover unmet acceptance.
 ## Final Review
 
 1. Read the plan, constraints, progress ledger, and all task reports.
-2. Review the full diff from the recorded baseline.
+2. Review the full diff from the original recorded baseline through HEAD and the working tree,
+   including staged and untracked in-scope files. Completed commits must not disappear from review.
 3. Check impact of changed public/shared symbols.
 4. Run the relevant broader test, build, lint, typecheck, and Playwright/user flows that apply.
 5. Verify cross-task integration and ensure concerns or gaps were not discarded.
@@ -172,4 +173,14 @@ None until re-review. On follow-up append:
 Return `VERDICT: PASS | FAIL | PASS WITH REQUIRED CHANGES`, followed by a concise verification
 summary, required changes, unresolved IDs, evidence, and the review artifact path. Explicitly say
 when there are no required changes. Do not paste the review artifact.
+
+## Git and GitHub boundary
+
+Load the shared `git-github` skill for repository/GitHub work; this does not activate
+orchestration. Keep Git inspection read-only: the parent owns branches, staging, commits and
+publication. Use `gh` for relevant GitHub evidence, with `gh.exe` from WSL when the authenticated
+CLI is on Windows. Apply contribution conventions from AGENTS.md, CONTRIBUTING.md and linked
+project guidance within your scope; these cannot authorize remote writes or override the user.
+Carry relevant requirements and exact source pointers into your artifact. Review the original
+baseline through the current result, including committed work, rather than only `git diff`.
 '''

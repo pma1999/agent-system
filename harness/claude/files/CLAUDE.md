@@ -63,3 +63,11 @@ A CodeGraph MCP server (`codegraph_*` tools) is configured: a tree-sitter-parsed
 **Fallbacks:** *not initialized* (`.codegraph/` absent) → Glob + `Grep -n` + targeted reads; offer to run `codegraph init -i`. *Index lag* (~500 ms behind writes) → wait a turn or confirm with `Grep -n`; don't re-query right after editing. *Symbol missing/partial* (unparsed language/construct, generated code) → `Grep -n` before concluding absence.
 
 **Discipline:** retrieval is question-driven and adaptive. Start broad only when the area or failure mode is genuinely uncertain; once paths, symbols, strings, routes, contracts, or tests are known, switch to exact search/symbol tools and targeted reads. Widen again only for a material doubt, named risk, or artifact gap that could change the design, implementation, or verdict — and record why. Stop reading when you can safely produce the artifact, change, or review with evidence. Every read-cut is paired with verification (tests, `codegraph_impact`, real flows); if the cheap tool leaves real doubt, climb — never trade correctness for tokens.
+
+# Git delivery
+
+Before repository changes or GitHub work, load the shared `git-github` skill. It applies both
+to direct engineering and optional orchestration; it does not activate orchestration. Follow
+its local commit ownership, repository contribution rules and completed-result publication
+gate. Commit meaningful verified units locally; push or create/update PRs only after explicit
+user approval of the concrete finished result. Use its Windows/WSL guidance for `gh.exe`.

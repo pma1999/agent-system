@@ -153,3 +153,11 @@ A Playwright MCP server and a Chrome DevTools MCP server are installed and avail
 Neither is the default: pick whichever fits what you need to see. Use one of them to look at what
 you built before calling it done - a diff cannot show contrast, focus order, layout at 375px,
 console errors, or layout shift.
+
+# Git delivery
+
+Before repository changes or GitHub work, load the shared `git-github` skill. It applies both
+to direct engineering and optional orchestration; it does not activate orchestration. Follow
+its local commit ownership, repository contribution rules and completed-result publication
+gate. Commit meaningful verified units locally; push or create/update PRs only after explicit
+user approval of the concrete finished result. Use its Windows/WSL guidance for `gh.exe`.

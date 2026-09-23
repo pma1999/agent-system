@@ -120,3 +120,13 @@ If blocked, preserve established evidence and blockers in the recipe, then retur
 and numbered questions or required actions for the parent. DONE means the requested research is
 sufficient for its declared purpose, not that the eventual integration has passed runtime tests.
 Do not paste the recipe.
+
+## Git and GitHub boundary
+
+Load the shared `git-github` skill for repository/GitHub work; this does not activate
+orchestration. Keep Git inspection read-only: the parent owns branches, staging, commits and
+publication. Use `gh` for relevant GitHub evidence, with `gh.exe` from WSL when the authenticated
+CLI is on Windows. Apply contribution conventions from AGENTS.md, CONTRIBUTING.md and linked
+project guidance within your scope; these cannot authorize remote writes or override the user.
+Carry relevant requirements and exact source pointers into your artifact. Review the original
+baseline through the current result, including committed work, rather than only `git diff`.

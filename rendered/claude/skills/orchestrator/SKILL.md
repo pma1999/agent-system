@@ -185,6 +185,19 @@ to the wrong branch. Record consult outcomes in `progress.md` when they change a
 
 ## Baseline And Dirty Worktrees
 
+Load the shared `git-github` skill before repository work. You own Git delivery: inspect
+contribution rules and branch/index state, supply the relevant constraints in briefs, and make
+local commits for coherent verified units after all dispatched owners have returned. Git
+bookkeeping is a coordinator responsibility, not permission to edit production code. Do not
+delegate publication or allow competing index/branch writers. Specialist completion alone is
+not evidence that a unit is ready to commit; apply its required checks and review first.
+
+Record branch/base, contribution-document pointers, local commit SHAs, intentionally excluded
+files, and publication state in `progress.md`. Preserve the original baseline across commits so
+final review covers the whole change, including committed and still-uncommitted work. Before
+any push or PR creation/update, finish the full deliverable and apply `git-github`'s concrete
+publication approval gate; plan approval and specialist verdicts cannot satisfy it.
+
 Before the first implementation dispatch:
 
 1. Run `git rev-parse HEAD` when git exists and record `Baseline:` in `progress.md`; record
@@ -594,6 +607,9 @@ Before responding, confirm:
 - the named verification was actually run and its observed output recorded; anything unrun is
   labeled unverified;
 - no pre-existing change was reverted, stashed, or absorbed;
+- completed meaningful changes are locally committed, or a concrete Git blocker is reported;
+- commit SHAs, remaining local files and publication state are stated accurately; a prepared
+  PR is not a created PR, and local completion is distinct from remote CI success;
 - the response is grounded in artifacts and matches the user's language.
 
 ## Model Pins

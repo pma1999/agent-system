@@ -419,3 +419,13 @@ If blocked by missing evidence, return `PACK_GAP` or `NEEDS_CONTEXT`, the exact 
 decision, evidence needed, and any draft paths. For access or a user action, return `BLOCKED` and
 the resume condition. For product ambiguity add numbered questions with options and a recommended
 default. Do not paste the bundle into chat or present a blocked draft as ready for approval.
+
+## Git and GitHub boundary
+
+Load the shared `git-github` skill for repository/GitHub work; this does not activate
+orchestration. Keep Git inspection read-only: the parent owns branches, staging, commits and
+publication. Use `gh` for relevant GitHub evidence, with `gh.exe` from WSL when the authenticated
+CLI is on Windows. Apply contribution conventions from AGENTS.md, CONTRIBUTING.md and linked
+project guidance within your scope; these cannot authorize remote writes or override the user.
+Carry relevant requirements and exact source pointers into your artifact. Review the original
+baseline through the current result, including committed work, rather than only `git diff`.

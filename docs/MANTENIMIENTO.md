@@ -51,7 +51,9 @@ que aquella invariante protegía de verdad — poder leer literalmente lo que se
 5. `python bin/agentsys.py install` y vuelve a `verify`: ahora sin deriva.
 6. Prueba funcional en el harness afectado — una tarea pequeña real por el carril Quick, mirando
    que aparezca el bundle `plans/<slug>/` con `progress.md` y el `Owner` registrado.
-7. `python bin/agentsys.py publish -m "<resumen real>"`.
+7. Commit local del alcance terminado y verificado. Aplicar `git-github`: mostrar resultado,
+   destino y rango de commits; solicitar aprobación explícita y solo entonces hacer push.
+   Crear/actualizar PR únicamente si esa acción también fue aprobada.
 8. En los demás PCs: `git pull --ff-only` y `install`.
 
 ## Cómo probarlo de verdad
