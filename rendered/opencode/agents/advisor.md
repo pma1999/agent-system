@@ -1,8 +1,8 @@
 ---
 description: "Use when the orquestador or one specialist needs an independent second opinion at a genuine decision point: before committing to an approach, when stuck, or at a high-stakes gate. Strictly read-only; reads the referenced evidence itself, returns decision-grade advice, and never writes code or coordinates work."
 mode: all
-model: opencode-go/muse-spark-1.3-contributor
-variant: xhigh
+model: openai/gpt-6-astra
+variant: medium
 color: "#f43f5e"
 tools:
   "playwright_*": true

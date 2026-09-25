@@ -1,8 +1,8 @@
 ---
 description: "Use when the orquestador needs design and dispatch-ready briefs with material prerequisites settled. Consumes requirements, context maps, diagnoses and integration recipes; returns gaps when evidence is missing instead of planning on assumptions. Writes plans/<slug>/ only, never production code."
 mode: subagent
-model: opencode-go/muse-spark-1.3-contributor
-variant: xhigh
+model: openai/gpt-6-astra
+variant: medium
 color: "#3b82f6"
 tools:
   "playwright_*": true
